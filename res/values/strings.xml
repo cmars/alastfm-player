@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, LastFMPlayer</string>
+    <string name="app_name">LastFMPlayer</string>
+<string name="local_service_connected">Local service connected</string>
+<string name="local_service_disconnected">Local service disconnected</string>
+<string name="alert_dialog_single_choice">Error</string>
+<string name="alert_dialog_ok">OK</string>
+<string name="user_info_title">User Info</string>
+<string name="ok_button">OK</string>
+<string name="cancel_button">Cancel</string>
+<string name="settings_button">Settings</string>
+</resources>
