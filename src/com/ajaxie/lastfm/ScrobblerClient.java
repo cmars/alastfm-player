@@ -18,7 +18,7 @@ import com.ajaxie.lastfm.Utils.OptionsParser;
 
 public class ScrobblerClient {
 
-	static final String CLIENT_ID = "test";
+	static final String CLIENT_ID = "wmp";
 	static final String CLIENT_VER = "1.0";
 	private static final String TAG = "ScrobblerClient";
 	private String mSessionId;
@@ -26,7 +26,7 @@ public class ScrobblerClient {
 	private String mSubmissionUrl;
 	
 	boolean handshake(String username, String password){
-		String timestamp = Long.toString(System.currentTimeMillis());
+		String timestamp = Long.toString(System.currentTimeMillis() / 1000);
 		String auth = Utils.md5String(Utils.md5String(password) + timestamp);
 		BufferedReader stringReader = null;
 		try {					
@@ -115,8 +115,8 @@ public class ScrobblerClient {
 		return false;
 	}
 
-	boolean submit(XSPFTrackInfo trackInfo, long startTime, String auth, String rating) {
-		return submit(trackInfo.getCreator(), trackInfo.getTitle(), trackInfo.getAlbum(), trackInfo.getDuration(), startTime, auth, rating);
+	boolean submit(XSPFTrackInfo trackInfo, long startTime, String rating) {
+		return submit(trackInfo.getCreator(), trackInfo.getTitle(), trackInfo.getAlbum(), trackInfo.getDuration(), startTime, trackInfo.getAuth(), rating);
 	}
 	
 	boolean submit(String artist, String track, String album, int len, long startTime, String auth, String rating) {
@@ -131,7 +131,7 @@ public class ScrobblerClient {
 			"&r[0]=" + rating +
 			"&l[0]=" + Integer.toString(len) + 
 			"&b[0]=" + URLEncoder.encode(album, "UTF-8");
-			url = new URL(mNowPlayingUrl);
+			url = new URL(mSubmissionUrl);
 		} catch (UnsupportedEncodingException e1) {
 			return false;
 		} catch (MalformedURLException e1) {

@@ -90,7 +90,6 @@ public class XSPFTrackInfo {
 		return mBitmap;
 	}
 	
-	private long mStartPlaybackTime;
 	private String mAuth;
 
 	public XSPFTrackInfo(Element element) throws XSPFParseException{
@@ -105,14 +104,6 @@ public class XSPFTrackInfo {
 			mImage =  getChildElement(element, "image");
 			mTitle =  getChildElement(element, "title");
 			mAuth =  getChildElement(element, "lastfm:trackauth");
-	}
-
-	public void setStartPlaybackTime(long startPlaybackTime) {
-		this.mStartPlaybackTime = startPlaybackTime;
-	}
-
-	public long getStartPlaybackTime() {
-		return mStartPlaybackTime;
 	}
 
 	public String getAuth() {

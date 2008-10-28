@@ -152,7 +152,10 @@ public class PlayerService extends Service {
 				setCurrentStatus(new ErrorStatus("Auth failed: " + message));
 				return false;
 			}
-			mPlayerThread = new PlayerThread(session, baseHost + basePath);
+			
+			ScrobblerClient scrobbler = new ScrobblerClient();
+			scrobbler.handshake(username, password);
+			mPlayerThread = new PlayerThread(scrobbler, session, baseHost + basePath);
 			mPlayerThread.start();
 			mPlayerThread.mInitLock.lock();			
 			try {
@@ -212,4 +215,17 @@ public class PlayerService extends Service {
 			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_SKIP).sendToTarget();
 		}
 	}
+	
+	public void loveCurrentTrack() {
+		if (mPlayerThread != null) {
+			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_LOVE).sendToTarget();
+		}
+	}
+
+	public void banCurrentTrack() {
+		if (mPlayerThread != null) {
+			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_BAN).sendToTarget();
+		}
+	}
+
 }

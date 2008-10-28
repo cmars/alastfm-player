@@ -37,6 +37,10 @@ public class PlayerThread extends Thread {
 	public static final int MESSAGE_UPDATE_PLAYLIST = 2;
 	public static final int MESSAGE_SKIP = 3;
 	public static final int MESSAGE_CACHE_TRACK_INFO = 4;
+	public static final int MESSAGE_SCROBBLE_NOW_PLAYING = 5;
+	public static final int MESSAGE_SUBMIT_TRACK = 6;
+	public static final int MESSAGE_LOVE = 7;
+	public static final int MESSAGE_BAN = 8;
 
 	public Handler mHandler;
 	public Lock mInitLock = new ReentrantLock();
@@ -50,6 +54,9 @@ public class PlayerThread extends Thread {
     private ArrayList<XSPFTrackInfo> mPlaylist;
 	private int mNextPlaylistItem;
 	private XSPFTrackInfo mCurrentTrack;
+	
+	private long mStartPlaybackTime;
+	private String mCurrentTrackRating;
 
 	LastFMError mError = null;
 	
@@ -72,10 +79,11 @@ public class PlayerThread extends Thread {
 		return mCurrentTrack;
 	}
 		
-	public PlayerThread(String session, String baseURL) {
+	public PlayerThread(ScrobblerClient scrobbler, String session, String baseURL) {
 		super();
 		mSession = session;
 		mBaseURL = baseURL;
+		mScrobbler = scrobbler;
 	}
 	
 	public void run()                       
@@ -90,7 +98,22 @@ public class PlayerThread extends Thread {
                 	stopPlaying();
                 	getLooper().quit();
                 	break;
+                case PlayerThread.MESSAGE_SUBMIT_TRACK:
+                	TrackSubmissionParams params = (TrackSubmissionParams)msg.obj;
+                	mScrobbler.submit(params.mTrack, params.mPlaybackStartTime, params.mRating);
+                case PlayerThread.MESSAGE_SCROBBLE_NOW_PLAYING:
+                	XSPFTrackInfo currTrack = getCurrentTrack();
+                	mScrobbler.nowPlaying(currTrack.getCreator(), currTrack.getTitle(), currTrack.getAlbum(), currTrack.getDuration());
+                	break;
+                case PlayerThread.MESSAGE_LOVE:
+                	setCurrentTrackRating("L");
+                	break;
+                case PlayerThread.MESSAGE_BAN:
+                	setCurrentTrackRating("B");
+                	playNextTrack();
+                	break;
                 case PlayerThread.MESSAGE_SKIP:
+                	setCurrentTrackRating("S");
                 	playNextTrack();
                 	break;
                 case PlayerThread.MESSAGE_CACHE_TRACK_INFO:
@@ -122,6 +145,10 @@ public class PlayerThread extends Thread {
 				}
             }
 
+			private void setCurrentTrackRating(String string) {
+				mCurrentTrackRating = string;
+			}
+
         };
 
         mInitialized = true;
@@ -130,8 +157,12 @@ public class PlayerThread extends Thread {
         mInitLock.unlock();
         Looper.loop();
     }
+	
+	ScrobblerClient mScrobbler;
 
 	public boolean stopPlaying() {
+		if (mCurrentTrack != null)
+			submitCurrentTrackDelayed();
 		if (mp != null)
 			mp.stop();
 		return true;
@@ -162,11 +193,35 @@ public class PlayerThread extends Thread {
 		}		
 	};
 
+	private static class TrackSubmissionParams {
+		public XSPFTrackInfo mTrack;
+		public long mPlaybackStartTime;
+		public String mRating;
+		
+		public TrackSubmissionParams(XSPFTrackInfo track, long playbackStartTime, String rating) {
+			mTrack = track;
+			mPlaybackStartTime = playbackStartTime;
+			mRating = rating;
+		}
+	}
+	
+	private void submitCurrentTrackDelayed() {
+		XSPFTrackInfo curTrack = getCurrentTrack();
+		if (curTrack.getDuration() > 30)			
+			if (mp.getCurrentPosition() > 240 || mp.getCurrentPosition() > curTrack.getDuration() || mCurrentTrackRating.equals("L") || mCurrentTrackRating.equals("B"))				
+			{
+				TrackSubmissionParams params = new TrackSubmissionParams(curTrack, mStartPlaybackTime, mCurrentTrackRating);
+				Message.obtain(mHandler, PlayerThread.MESSAGE_SUBMIT_TRACK, params).sendToTarget();					
+			}			
+	}
+
 	private void startPlaying() throws LastFMError {
 		playNextTrack();
 	}
 	
 	private void playNextTrack() throws LastFMError {
+		if (mCurrentTrack != null)
+			submitCurrentTrackDelayed();
 		mCurrentTrack = getNextTrack();
 		String streamUrl = mCurrentTrack.getLocation();
 		try {
@@ -174,9 +229,11 @@ public class PlayerThread extends Thread {
 			mp.setDataSource(streamUrl);
 			mp.setOnCompletionListener(mOnTrackCompletionListener);
 			mp.prepare();
-			mCurrentTrack.setStartPlaybackTime(System.currentTimeMillis() / 1000);
 			mp.start();
+			mStartPlaybackTime = System.currentTimeMillis() / 1000;		
+			mCurrentTrackRating = "";
 			Message.obtain(mHandler, PlayerThread.MESSAGE_CACHE_TRACK_INFO).sendToTarget();			
+			Message.obtain(mHandler, PlayerThread.MESSAGE_SCROBBLE_NOW_PLAYING).sendToTarget();			
 		} catch (IllegalArgumentException e) {
 			e.printStackTrace();
 			throw new LastFMError(e.toString());
