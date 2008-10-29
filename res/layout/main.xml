@@ -11,26 +11,9 @@
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="wrap_content" android:layout_height="wrap_content"
 		android:layout_gravity="left">
-		<ImageButton android:layout_width="100dip"
-			android:layout_height="100dip" android:id="@+id/play_button"
-			android:src="@drawable/play" />
-
-		<ImageButton android:layout_width="100dip"
-			android:layout_height="100dip" android:id="@+id/stop_button"
-			android:src="@drawable/stop" />
-
-		<ImageButton android:layout_width="100dip"
-			android:layout_height="100dip" android:id="@+id/skip_button"
-			android:src="@drawable/skip" />
-
-	</LinearLayout>
-	
-	<LinearLayout android:orientation="horizontal"
-		android:layout_width="wrap_content" android:layout_height="wrap_content"
-		android:layout_gravity="left">
 
 		<ImageSwitcher android:id="@+id/album_view" android:layout_width="100dip"
-			android:layout_height="100dip"/>
+			android:layout_height="100dip" android:paddingRight="8dip"/>
 			
 		<LinearLayout android:orientation="vertical"
 			android:layout_width="wrap_content" android:layout_height="wrap_content"
@@ -47,6 +30,23 @@
 
 	</LinearLayout>
 
+	<LinearLayout android:orientation="horizontal"
+		android:layout_width="wrap_content" android:layout_height="wrap_content"
+		android:layout_gravity="left">
+		<ImageButton android:layout_width="100dip"
+			android:layout_height="100dip" android:id="@+id/play_button"
+			android:src="@drawable/play" />
+
+		<ImageButton android:layout_width="100dip"
+			android:layout_height="100dip" android:id="@+id/stop_button"
+			android:src="@drawable/stop" />
+
+		<ImageButton android:layout_width="100dip"
+			android:layout_height="100dip" android:id="@+id/skip_button"
+			android:src="@drawable/skip" />
+
+	</LinearLayout>
+	
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="wrap_content" android:layout_height="wrap_content"
 		android:layout_gravity="left">
