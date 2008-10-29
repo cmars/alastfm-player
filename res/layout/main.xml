@@ -25,18 +25,6 @@
 
 	</LinearLayout>
 	
-	<TextView android:id="@+id/time_counter" android:layout_height="wrap_content"
-		android:textSize="45dip" android:text="0:00" android:layout_width="wrap_content" />
-
-	<LinearLayout android:orientation="horizontal"
-		android:layout_width="wrap_content" android:layout_height="wrap_content"
-		android:layout_gravity="right">
-
-		<Button android:id="@+id/settings_button" android:layout_width="wrap_content"
-			android:layout_height="wrap_content" android:text="@string/settings_button" />
-
-	</LinearLayout>
-
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="wrap_content" android:layout_height="wrap_content"
 		android:layout_gravity="left">
@@ -52,8 +40,32 @@
 			<TextView android:id="@+id/album_name_text" android:layout_height="wrap_content"
 				android:text="" android:layout_width="wrap_content" />
 			<TextView android:id="@+id/track_name_text" android:layout_height="wrap_content"
-				android:text="" android:layout_width="wrap_content" />			
+				android:text="" android:layout_width="wrap_content" />
+			<TextView android:id="@+id/time_counter" android:layout_height="wrap_content"
+				android:textSize="45dip" android:text="0:00" android:layout_width="wrap_content" />							
 		</LinearLayout>
+
+	</LinearLayout>
+
+	<LinearLayout android:orientation="horizontal"
+		android:layout_width="wrap_content" android:layout_height="wrap_content"
+		android:layout_gravity="left">
+		<ImageButton android:layout_width="100dip"
+			android:layout_height="100dip" android:id="@+id/love_button"
+			android:src="@drawable/love" />
+
+		<ImageButton android:layout_width="100dip"
+			android:layout_height="100dip" android:id="@+id/ban_button"
+			android:src="@drawable/ban" />
+
+	</LinearLayout>
+
+	<LinearLayout android:orientation="horizontal"
+		android:layout_width="wrap_content" android:layout_height="wrap_content"
+		android:layout_gravity="right">
+
+		<Button android:id="@+id/settings_button" android:layout_width="wrap_content"
+			android:layout_height="wrap_content" android:text="@string/settings_button" />
 
 	</LinearLayout>
 

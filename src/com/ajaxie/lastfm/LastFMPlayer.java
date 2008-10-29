@@ -174,7 +174,23 @@ public class LastFMPlayer extends Activity {
         			mBoundService.skipCurrentTrack();
             }
         });                
-        
+
+        final ImageButton banButton = (ImageButton)findViewById(R.id.ban_button);
+        banButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+        		if (mBoundService != null)
+        			mBoundService.banCurrentTrack();
+            }
+        });                
+
+        final ImageButton loveButton = (ImageButton)findViewById(R.id.love_button);
+        loveButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+        		if (mBoundService != null)
+        			mBoundService.loveCurrentTrack();
+            }
+        });                
+
         final Button settingsButton = (Button)findViewById(R.id.settings_button);
         settingsButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
