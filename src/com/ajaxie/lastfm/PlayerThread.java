@@ -24,9 +24,11 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnBufferingUpdateListener;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
+import android.util.Log;
 
 import com.ajaxie.lastfm.Utils.OptionsParser;
 
@@ -41,6 +43,8 @@ public class PlayerThread extends Thread {
 	public static final int MESSAGE_SUBMIT_TRACK = 6;
 	public static final int MESSAGE_LOVE = 7;
 	public static final int MESSAGE_BAN = 8;
+	
+	private static final String TAG = "PlayerThread";
 
 	public Handler mHandler;
 	public Lock mInitLock = new ReentrantLock();
@@ -193,6 +197,12 @@ public class PlayerThread extends Thread {
 		}		
 	};
 
+	OnBufferingUpdateListener mOnBufferingUpdateListener = new MediaPlayer.OnBufferingUpdateListener() {
+		@Override
+		public void onBufferingUpdate(MediaPlayer mp, int percent) {
+		}		
+	};
+	
 	private static class TrackSubmissionParams {
 		public XSPFTrackInfo mTrack;
 		public long mPlaybackStartTime;
@@ -228,6 +238,7 @@ public class PlayerThread extends Thread {
 			mp = new MediaPlayer();
 			mp.setDataSource(streamUrl);
 			mp.setOnCompletionListener(mOnTrackCompletionListener);
+			mp.setOnBufferingUpdateListener(mOnBufferingUpdateListener);
 			mp.prepare();
 			mp.start();
 			mStartPlaybackTime = System.currentTimeMillis() / 1000;		
@@ -235,13 +246,13 @@ public class PlayerThread extends Thread {
 			Message.obtain(mHandler, PlayerThread.MESSAGE_CACHE_TRACK_INFO).sendToTarget();			
 			Message.obtain(mHandler, PlayerThread.MESSAGE_SCROBBLE_NOW_PLAYING).sendToTarget();			
 		} catch (IllegalArgumentException e) {
-			e.printStackTrace();
+			Log.e(TAG, "in playNextTrack", e);
 			throw new LastFMError(e.toString());
 		} catch (IllegalStateException e) {
-			e.printStackTrace();
+			Log.e(TAG, "in playNextTrack", e);
 			throw new LastFMError(e.toString());
 		} catch (IOException e) {
-			e.printStackTrace();
+			Log.e(TAG, "in playNextTrack", e);
 			playNextTrack();
 		}
 	}
@@ -268,25 +279,25 @@ public class PlayerThread extends Thread {
 				try {
 					result.add(new XSPFTrackInfo((Element)tracks.item(i)));
 				} catch (XSPFParseException e) {
-					e.printStackTrace();
+					Log.e(TAG, "in getPlaylist", e);
 					return null;
 				}
 			
 			return result;
 			} catch (MalformedURLException e) {
-				e.printStackTrace();
+				Log.e(TAG, "in getPlaylist", e);
 				return null;
 			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
+				Log.e(TAG, "in getPlaylist", e);
 				return null;
 			} catch (IOException e) {
-				e.printStackTrace();
+				Log.e(TAG, "in getPlaylist", e);
 				return null;
 			} catch (ParserConfigurationException e) {
-				e.printStackTrace();
+				Log.e(TAG, "in getPlaylist", e);
 				return null;
 			} catch (SAXException e) {
-				e.printStackTrace();
+				Log.e(TAG, "in getPlaylist", e);
 				return null;
 			} 
 	}
@@ -309,13 +320,13 @@ public class PlayerThread extends Thread {
 		else
 			return false;
 		} catch (MalformedURLException e) {
-			e.printStackTrace();
+			Log.e(TAG, "in adjust", e);
 			throw new LastFMError("Adjust failed:" + e.toString());
 		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
+			Log.e(TAG, "in adjust", e);
 			throw new LastFMError("Adjust failed:" + e.toString());
 		} catch (IOException e) {
-			e.printStackTrace();
+			Log.e(TAG, "in adjust", e);
 			throw new LastFMError("Station not found:" + stationUrl);
 		} 
 	}

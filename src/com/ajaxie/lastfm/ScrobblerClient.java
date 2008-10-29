@@ -52,15 +52,15 @@ public class ScrobblerClient {
 			Log.e(TAG, "Handshake failed: " + res);
 			return false;
 		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
+			Log.e(TAG, "in scrobbler handshake", e);
 			return false;
 		} catch (IOException e) {
-			e.printStackTrace();
+			Log.e(TAG, "in scrobbler handshake", e);
 			if (stringReader != null)
 				try {
 					stringReader.close();
 				} catch (IOException e1) {
-					e1.printStackTrace();
+					Log.e(TAG, "in scrobbler handshake", e1);
 				}
 			return false;
 		}
@@ -75,9 +75,10 @@ public class ScrobblerClient {
 			"&l=" + Integer.toString(len) + "&n=&m=";
 			url = new URL(mNowPlayingUrl);
 		} catch (UnsupportedEncodingException e1) {
+			Log.e(TAG, "while scrobbling 'now playing'", e1);
 			return false;
 		} catch (MalformedURLException e1) {
-			e1.printStackTrace();
+			Log.e(TAG, "while scrobbling 'now playing'", e1);
 			return false;
 		}
 		
@@ -102,14 +103,14 @@ public class ScrobblerClient {
 				return false;
 			}
 		} catch (IOException e) {
-			e.printStackTrace();			
+			Log.e(TAG, "while scrobbling 'now playing'", e);
 		} finally {
 	        try {
 				wr.close();			
 				if (rd != null)
 					rd.close();
 	        } catch (IOException e) {
-				e.printStackTrace();
+				Log.e(TAG, "while scrobbling 'now playing'", e);
 			}
 		}
 		return false;
@@ -133,9 +134,10 @@ public class ScrobblerClient {
 			"&b[0]=" + URLEncoder.encode(album, "UTF-8");
 			url = new URL(mSubmissionUrl);
 		} catch (UnsupportedEncodingException e1) {
+			Log.e(TAG, "while scrobbling", e1);
 			return false;
 		} catch (MalformedURLException e1) {
-			e1.printStackTrace();
+			Log.e(TAG, "while scrobbling", e1);
 			return false;
 		}
 		
@@ -160,14 +162,14 @@ public class ScrobblerClient {
 				return false;
 			}
 		} catch (IOException e) {
-			e.printStackTrace();			
+			Log.e(TAG, "while scrobbling", e);
 		} finally {
 	        try {
 				wr.close();			
 				if (rd != null)
 					rd.close();
 	        } catch (IOException e) {
-				e.printStackTrace();
+				Log.e(TAG, "while scrobbling", e);
 			}
 		}
 		return false;
