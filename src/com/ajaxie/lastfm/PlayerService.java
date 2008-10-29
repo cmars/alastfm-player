@@ -4,17 +4,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.StringReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.media.MediaPlayer;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Message;
@@ -153,9 +148,7 @@ public class PlayerService extends Service {
 				return false;
 			}
 			
-			ScrobblerClient scrobbler = new ScrobblerClient();
-			scrobbler.handshake(username, password);
-			mPlayerThread = new PlayerThread(scrobbler, session, baseHost + basePath);
+			mPlayerThread = new PlayerThread(username, password, session, baseHost + basePath);
 			mPlayerThread.start();
 			mPlayerThread.mInitLock.lock();			
 			try {

@@ -95,11 +95,14 @@ public class ScrobblerClient {
         String res;
         	rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			res = rd.readLine();
-			if (res.equals("OK"))
+			if (res != null && res.equals("OK"))
 				return true;
 			else
 			{
-				Log.e(TAG, "Now playing returned " + res);
+				if (res == null)
+					Log.e(TAG, "Now playing returned null" );
+				else
+					Log.e(TAG, "Now playing returned " + res);
 				return false;
 			}
 		} catch (IOException e) {
@@ -131,7 +134,8 @@ public class ScrobblerClient {
 			"&o[0]=L" + auth +
 			"&r[0]=" + rating +
 			"&l[0]=" + Integer.toString(len) + 
-			"&b[0]=" + URLEncoder.encode(album, "UTF-8");
+			"&b[0]=" + URLEncoder.encode(album, "UTF-8") +
+			"&n[0]=&m[0]=";
 			url = new URL(mSubmissionUrl);
 		} catch (UnsupportedEncodingException e1) {
 			Log.e(TAG, "while scrobbling", e1);

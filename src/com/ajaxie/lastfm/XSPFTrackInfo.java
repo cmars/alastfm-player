@@ -7,8 +7,6 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -16,23 +14,6 @@ import android.util.Log;
 
 public class XSPFTrackInfo {
 	private static final String TAG = "XSPFTrackInfo";
-
-	private static String getChildElement(final Element element, final String childName) throws XSPFParseException {
-		NodeList nodes = element.getElementsByTagName(childName);
-		if (nodes.getLength() != 1)
-			throw new XSPFParseException(element, childName);
-		if (nodes.item(0).getNodeType() != Node.ELEMENT_NODE)
-			throw new XSPFParseException(element, childName);
-		
-		Element el = (Element)nodes.item(0);
-		String res = "";
-		for (int i = 0; i < el.getChildNodes().getLength(); i++)
-		{
-			if (el.getChildNodes().item(i).getNodeType() == Node.TEXT_NODE)
-				res = res + el.getChildNodes().item(i).getNodeValue();
-		}
-		return res;
-	}
 
 	private String mLocation;
 	private String mAlbum;
@@ -93,17 +74,17 @@ public class XSPFTrackInfo {
 	private String mAuth;
 
 	public XSPFTrackInfo(Element element) throws XSPFParseException{
-			mLocation = getChildElement(element, "location");		
-			mAlbum = getChildElement(element, "album");		
-			mCreator = getChildElement(element, "creator");
+			mLocation = Utils.getChildElement(element, "location");		
+			mAlbum = Utils.getChildElement(element, "album");		
+			mCreator = Utils.getChildElement(element, "creator");
 			try {
-				mDuration = Integer.parseInt(getChildElement(element, "duration"));
+				mDuration = Integer.parseInt(Utils.getChildElement(element, "duration"));
 			} catch (NumberFormatException ex) {
 				throw new XSPFParseException(element, "duration");
 			}
-			mImage =  getChildElement(element, "image");
-			mTitle =  getChildElement(element, "title");
-			mAuth =  getChildElement(element, "lastfm:trackauth");
+			mImage =  Utils.getChildElement(element, "image");
+			mTitle =  Utils.getChildElement(element, "title");
+			mAuth =  Utils.getChildElement(element, "lastfm:trackauth");
 	}
 
 	public String getAuth() {
