@@ -6,7 +6,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -34,18 +38,36 @@ public class PlayerService extends Service {
 
 	private final IBinder mBinder = new LocalBinder();
 
+	private NotificationManager mNM;
+
 	@Override
 	public IBinder onBind(Intent intent) {
 		return mBinder;
 	}
 
+    private static int PLAYER_NOTIFICATIONS = 1;
+
 	@Override
 	public void onCreate() {
+        mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);		
 	}
 
 	@Override
 	public void onDestroy() {
 		stopPlaying();
+        mNM.cancel(PLAYER_NOTIFICATIONS);
+	}
+	
+	private void updateNotification(String text) {
+        Notification notification = new Notification(R.drawable.play, null, System.currentTimeMillis());
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+                new Intent(this, LastFMPlayer.class), 0);
+        
+        notification.setLatestEventInfo(this, "LastFM Player",
+                "LastFM Player Service", contentIntent);
+        
+        mNM.notify(PLAYER_NOTIFICATIONS, notification);
+        
 	}
 
 	public interface Status {
@@ -157,6 +179,10 @@ public class PlayerService extends Service {
 				Message m = Message.obtain(mPlayerThread.mHandler,
 						PlayerThread.MESSAGE_ADJUST, url);
 				m.sendToTarget();
+
+				Message.obtain(mPlayerThread.mHandler,
+						PlayerThread.MESSAGE_CACHE_FRIENDS_LIST).sendToTarget();
+				updateNotification("Starting playback");
 				return true;
 			} catch (InterruptedException e) {
 				mPlayerThread.mInitLock.unlock();
@@ -170,19 +196,11 @@ public class PlayerService extends Service {
 				setCurrentStatus(new ErrorStatus("Auth failed: " + e.toString()));
 				return false;
 			}
-		} catch (IllegalArgumentException e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 			setCurrentStatus(new ErrorStatus("Auth failed: " + e.toString()));
 			return false;
-		} catch (IllegalStateException e) {
-			e.printStackTrace();
-			setCurrentStatus(new ErrorStatus("Auth failed: " + e.toString()));
-			return false;
-		} catch (IOException e) {
-			e.printStackTrace();
-			setCurrentStatus(new ErrorStatus("Auth failed: " + e.toString()));
-			return false;
-		}
+		} 
 	}
 
 	Utils.OptionsParser handshake(String Username, String Pass) throws IOException {
@@ -212,6 +230,20 @@ public class PlayerService extends Service {
 	public void loveCurrentTrack() {
 		if (mPlayerThread != null) {
 			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_LOVE).sendToTarget();
+		}
+	}
+	
+	public final ArrayList<FriendInfo> getFriendsList() {
+		if (mPlayerThread != null)
+			return mPlayerThread.getFriendsList();
+		else 
+			return null;
+	}	
+
+	public void shareTrack(XSPFTrackInfo track, String recipient, String message) {
+		if (mPlayerThread != null) {
+			PlayerThread.TrackShareParams msgParams = new PlayerThread.TrackShareParams(track, recipient, message, "en");
+			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_SHARE, msgParams).sendToTarget();
 		}
 	}
 

@@ -48,9 +48,12 @@ public class PlayerThread extends Thread {
 	public static final int MESSAGE_SUBMIT_TRACK = 6;
 	public static final int MESSAGE_LOVE = 7;
 	public static final int MESSAGE_BAN = 8;
+	public static final int MESSAGE_SHARE = 9;
+	public static final int MESSAGE_CACHE_FRIENDS_LIST = 10;
 
 	private static final String TAG = "PlayerThread";
 	private static final String XMLRPC_URL = "http://ws.audioscrobbler.com/1.0/rw/xmlrpc.php";
+	private static final String WS_URL = "http://ws.audioscrobbler.com/1.0";
 
 	public Handler mHandler;
 	public Lock mInitLock = new ReentrantLock();
@@ -91,6 +94,8 @@ public class PlayerThread extends Thread {
 
 	String mUsername;
 	String mPassword;
+	protected ArrayList<FriendInfo> mFriendsList;
+	
 	public PlayerThread(String username, String password, String session,
 			String baseURL) {
 		super();
@@ -124,15 +129,19 @@ public class PlayerThread extends Thread {
 								.getTitle(), currTrack.getAlbum(), currTrack
 								.getDuration());
 						break;
+					case PlayerThread.MESSAGE_SHARE:
+						TrackShareParams msgParams = (TrackShareParams) msg.obj;
+						scrobblerRpcCall("recommendItem", new String[] {msgParams.mTrack.getCreator(), msgParams.mTrack.getTitle(), "track", msgParams.mRecipient, msgParams.mMessage, msgParams.mLanguage });
+						break;
 					case PlayerThread.MESSAGE_LOVE:
 						setCurrentTrackRating("L");
 						XSPFTrackInfo currentTrack = getCurrentTrack();
-						scrobblerRpcCall("loveTrack", new String[] {currentTrack.getTitle(), currentTrack.getCreator() });
+						scrobblerRpcCall("loveTrack", new String[] {currentTrack.getCreator(), currentTrack.getTitle()});
 						break;
 					case PlayerThread.MESSAGE_BAN:
 						setCurrentTrackRating("B");
 						XSPFTrackInfo currentTrack2 = getCurrentTrack();
-						scrobblerRpcCall("banTrack", new String[] {currentTrack2.getTitle(), currentTrack2.getCreator() });
+						scrobblerRpcCall("banTrack", new String[] {currentTrack2.getCreator(), currentTrack2.getTitle()});
 						playNextTrack();
 						break;
 					case PlayerThread.MESSAGE_SKIP:
@@ -141,6 +150,9 @@ public class PlayerThread extends Thread {
 						break;
 					case PlayerThread.MESSAGE_CACHE_TRACK_INFO:
 						getCurrentTrack().downloadImageBitmap();
+						break;
+					case PlayerThread.MESSAGE_CACHE_FRIENDS_LIST:
+						mFriendsList = downloadFriendsList();
 						break;
 					case PlayerThread.MESSAGE_UPDATE_PLAYLIST:
 						mPlaylist = getPlaylist();
@@ -188,6 +200,10 @@ public class PlayerThread extends Thread {
 			mp.stop();
 		return true;
 	}
+	
+	public final ArrayList<FriendInfo> getFriendsList() {
+		return mFriendsList;
+	}
 
 	private XSPFTrackInfo getNextTrack() {
 		if (mNextPlaylistItem >= mPlaylist.size()) {
@@ -229,6 +245,21 @@ public class PlayerThread extends Thread {
 			mTrack = track;
 			mPlaybackStartTime = playbackStartTime;
 			mRating = rating;
+		}
+	}
+
+	public static class TrackShareParams {
+		public XSPFTrackInfo mTrack;		
+		public String mRecipient;
+		public String mMessage;
+		public String mLanguage;
+
+		public TrackShareParams(XSPFTrackInfo track,
+				String recipient, String message, String language) {
+			mTrack = track;
+			mMessage = message;
+			mRecipient = recipient;
+			mLanguage = language;
 		}
 	}
 
@@ -286,6 +317,35 @@ public class PlayerThread extends Thread {
 		Message.obtain(mHandler, PlayerThread.MESSAGE_UPDATE_PLAYLIST)
 				.sendToTarget();
 	}
+	
+	private ArrayList<FriendInfo> downloadFriendsList() {
+		try {
+			URL url;
+			url = new URL(WS_URL + "/user/" + URLEncoder.encode(mUsername, "UTF-8") + "/friends.xml");
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.connect();
+			InputStream is = conn.getInputStream();
+
+			DocumentBuilderFactory dbFac = DocumentBuilderFactory.newInstance();
+			DocumentBuilder db = dbFac.newDocumentBuilder();
+			Document doc = db.parse(is);
+
+			NodeList friends = doc.getElementsByTagName("user");
+			ArrayList<FriendInfo> result = new ArrayList<FriendInfo>();
+			for (int i = 0; i < friends.getLength(); i++)
+				try {
+					result.add(new FriendInfo((Element) friends.item(i)));
+				} catch (Utils.ParseException e) {
+					Log.e(TAG, "in downloadFriendsList", e);
+					return null;
+				}
+
+			return result;
+		} catch (Exception e) {
+			Log.e(TAG, "in downloadFriendsList", e);
+			return null;
+		} 		
+	}	
 
 	private ArrayList<XSPFTrackInfo> getPlaylist() {
 		try {
@@ -305,28 +365,16 @@ public class PlayerThread extends Thread {
 			for (int i = 0; i < tracks.getLength(); i++)
 				try {
 					result.add(new XSPFTrackInfo((Element) tracks.item(i)));
-				} catch (XSPFParseException e) {
+				} catch (Utils.ParseException e) {
 					Log.e(TAG, "in getPlaylist", e);
 					return null;
 				}
 
 			return result;
-		} catch (MalformedURLException e) {
+		} catch (Exception e) {
 			Log.e(TAG, "in getPlaylist", e);
 			return null;
-		} catch (UnsupportedEncodingException e) {
-			Log.e(TAG, "in getPlaylist", e);
-			return null;
-		} catch (IOException e) {
-			Log.e(TAG, "in getPlaylist", e);
-			return null;
-		} catch (ParserConfigurationException e) {
-			Log.e(TAG, "in getPlaylist", e);
-			return null;
-		} catch (SAXException e) {
-			Log.e(TAG, "in getPlaylist", e);
-			return null;
-		}
+		} 
 	}
 
 	private boolean adjust(String stationUrl) throws LastFMError {
@@ -346,8 +394,10 @@ public class PlayerThread extends Thread {
 			stringReader.close();
 			if ("OK".equals(options.get("response")))
 				return true;
-			else
+			else {
+				Log.e(TAG, "Adjust failed: \"" + options.get("response") + "\"");				
 				return false;
+			}
 		} catch (MalformedURLException e) {
 			Log.e(TAG, "in adjust", e);
 			throw new LastFMError("Adjust failed:" + e.toString());

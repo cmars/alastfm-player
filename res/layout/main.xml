@@ -58,15 +58,11 @@
 			android:layout_height="100dip" android:id="@+id/ban_button"
 			android:src="@drawable/ban" />
 
-	</LinearLayout>
-
-	<LinearLayout android:orientation="horizontal"
-		android:layout_width="wrap_content" android:layout_height="wrap_content"
-		android:layout_gravity="right">
-
-		<Button android:id="@+id/settings_button" android:layout_width="wrap_content"
-			android:layout_height="wrap_content" android:text="@string/settings_button" />
+		<ImageButton android:layout_width="100dip"
+			android:layout_height="100dip" android:id="@+id/share_button"
+			android:src="@drawable/share" />
 
 	</LinearLayout>
+
 
 </LinearLayout>

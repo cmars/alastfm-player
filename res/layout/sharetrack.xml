@@ -4,25 +4,30 @@
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
     >
-<TextView  
+
+    <TextView android:id="@+id/share_track_author"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+    />
+    <TextView android:id="@+id/share_track_title"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+    />
+
+<AutoCompleteTextView android:id="@+id/share_track_recipient" 
     android:layout_height="wrap_content" 
-    android:text="@string/user_info_title"
-    android:layout_width="wrap_content"/>
+    android:text=""
+    android:layout_width="fill_parent"/>
 
-    <EditText android:id="@+id/username"
+    <EditText android:id="@+id/share_track_message"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:layout_weight="1"        
         android:clickable="true"
-        android:singleLine="true"
+        android:singleLine="false"
     />
-
-    <EditText android:id="@+id/password"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:clickable="true"
-        android:singleLine="true"
-        android:password="true"
-    />
+      
     <LinearLayout
         android:orientation="horizontal"
         android:layout_width="fill_parent"

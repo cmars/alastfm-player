@@ -11,6 +11,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import android.util.Log;
+
 public class Utils {
 	static class OptionsParser {
 		BufferedReader mReader;
@@ -62,12 +64,40 @@ public class Utils {
 		}		
 	}
 
-	static public String getChildElement(final Element element, final String childName) throws XSPFParseException {
+	public static class ParseException extends Exception {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 3651212766122533595L;
+		/**
+		 * 
+		 */
+
+		Element mElement;
+		String mName;
+		
+		public ParseException(Element element, String name) {
+			mElement = element;
+			mName = name;
+		}
+		
+		public String toString() {
+			return "Error parsing " + mName + " at " + mElement.toString();
+		}
+	}
+	
+	static public String getChildElement(final Element element, final String childName) throws ParseException {
 		NodeList nodes = element.getElementsByTagName(childName);
 		if (nodes.getLength() != 1)
-			throw new XSPFParseException(element, childName);
+		{
+			Log.i("getChildElement", element.toString());
+			throw new ParseException(element, childName);
+		}
 		if (nodes.item(0).getNodeType() != Node.ELEMENT_NODE)
-			throw new XSPFParseException(element, childName);
+		{
+			Log.i("getChildElement", element.toString());
+			throw new ParseException(element, childName);
+		}
 		
 		Element el = (Element)nodes.item(0);
 		String res = "";

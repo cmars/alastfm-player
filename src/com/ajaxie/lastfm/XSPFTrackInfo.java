@@ -73,14 +73,14 @@ public class XSPFTrackInfo {
 	
 	private String mAuth;
 
-	public XSPFTrackInfo(Element element) throws XSPFParseException{
+	public XSPFTrackInfo(Element element) throws Utils.ParseException{
 			mLocation = Utils.getChildElement(element, "location");		
 			mAlbum = Utils.getChildElement(element, "album");		
 			mCreator = Utils.getChildElement(element, "creator");
 			try {
 				mDuration = Integer.parseInt(Utils.getChildElement(element, "duration"));
 			} catch (NumberFormatException ex) {
-				throw new XSPFParseException(element, "duration");
+				throw new Utils.ParseException(element, "duration");
 			}
 			mImage =  Utils.getChildElement(element, "image");
 			mTitle =  Utils.getChildElement(element, "title");

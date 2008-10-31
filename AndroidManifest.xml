@@ -19,6 +19,14 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        <activity android:name=".ShareTrackActivity"
+                  android:label="@string/share_track_title">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        
 	   <service android:name=".PlayerService" />
     </application>
 
