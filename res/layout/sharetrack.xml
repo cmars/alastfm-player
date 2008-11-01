@@ -5,16 +5,19 @@
     android:layout_height="fill_parent"
     >
 
-    <TextView android:id="@+id/share_track_author"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:singleLine="true"
-    />
     <TextView android:id="@+id/share_track_title"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
+        android:text="boo"
+        android:textSize="18sp"
     />
 
+    <TextView android:id="@+id/share_track_author"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:text="boo"
+        android:singleLine="true"
+    />
 <AutoCompleteTextView android:id="@+id/share_track_recipient" 
     android:layout_height="wrap_content" 
     android:text=""
@@ -26,6 +29,9 @@
         android:layout_weight="1"        
         android:clickable="true"
         android:singleLine="false"
+		android:capitalize="sentences"
+		android:autoText="true"        
+		android:gravity="top"       
     />
       
     <LinearLayout

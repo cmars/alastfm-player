@@ -45,11 +45,13 @@ public final class R {
         public static final int username=0x7f050013;
     }
     public static final class layout {
-        public static final int main=0x7f030000;
-        public static final int sharetrack=0x7f030001;
-        public static final int userinfo=0x7f030002;
+        public static final int about=0x7f030000;
+        public static final int main=0x7f030001;
+        public static final int sharetrack=0x7f030002;
+        public static final int userinfo=0x7f030003;
     }
     public static final class string {
+        public static final int about_title=0x7f04000d;
         public static final int alert_dialog_ok=0x7f040005;
         public static final int alert_dialog_single_choice=0x7f040004;
         public static final int app_name=0x7f040001;
@@ -57,6 +59,7 @@ public final class R {
         public static final int hello=0x7f040000;
         public static final int local_service_connected=0x7f040002;
         public static final int local_service_disconnected=0x7f040003;
+        public static final int menu_about=0x7f04000c;
         public static final int menu_settings=0x7f04000a;
         public static final int ok_button=0x7f040007;
         public static final int settings_button=0x7f040009;

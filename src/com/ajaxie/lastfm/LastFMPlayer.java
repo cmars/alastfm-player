@@ -43,11 +43,13 @@ public class LastFMPlayer extends Activity {
 	protected static final int SHARE_TRACK = 1;
 
 	public static final int MENU_SETTINGS_ID = Menu.FIRST;
+	public static final int MENU_ABOUT_ID = Menu.FIRST + 1;
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		boolean result = super.onCreateOptionsMenu(menu);
 		menu.add(0, MENU_SETTINGS_ID, 0, R.string.menu_settings);
+		menu.add(0, MENU_ABOUT_ID, 0, R.string.menu_about);
 		return result;
 	}
 
@@ -58,6 +60,11 @@ public class LastFMPlayer extends Activity {
 			startActivityForResult(
 					new Intent(LastFMPlayer.this, UserInfo.class),
 					SET_USER_INFO);
+			return true;
+		case MENU_ABOUT_ID:
+			startActivity(
+					new Intent(LastFMPlayer.this, AboutActivity.class)
+					);
 			return true;
 		}
 

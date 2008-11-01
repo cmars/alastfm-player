@@ -42,7 +42,7 @@ public class ShareTrackActivity extends Activity {
     		{
     			mTrack = ((PlayingStatus)st).getCurrentTrack();
                 titleText.setText(mTrack.getTitle());
-                authorText.setText(mTrack.getCreator());
+                authorText.setText("by " + mTrack.getCreator());
                 
                 ArrayAdapter<FriendInfo> adapter = new ArrayAdapter<FriendInfo>(ShareTrackActivity.this,
                         android.R.layout.simple_dropdown_item_1line,
@@ -73,10 +73,15 @@ public class ShareTrackActivity extends Activity {
         okButton.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 final AutoCompleteTextView recipientText = (AutoCompleteTextView)findViewById(R.id.share_track_recipient);
-                final EditText messageText = (EditText)findViewById(R.id.share_track_message);                
-                mBoundService.shareTrack(mTrack, recipientText.getText().toString(), messageText.getText().toString());                
-                setResult(RESULT_OK);
-                finish();
+                final EditText messageText = (EditText)findViewById(R.id.share_track_message); 
+                if (recipientText.getText().toString().equals("")) {
+                	recipientText.setError("Please enter recipient nickname");
+                	recipientText.requestFocus();
+                } else {
+                	mBoundService.shareTrack(mTrack, recipientText.getText().toString(), messageText.getText().toString());                
+                	setResult(RESULT_OK);
+                	finish();
+                }                	
             }
         });      	        
 
