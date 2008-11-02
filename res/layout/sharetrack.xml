@@ -8,14 +8,14 @@
     <TextView android:id="@+id/share_track_title"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="boo"
+        android:text=""
         android:textSize="18sp"
     />
 
     <TextView android:id="@+id/share_track_author"
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:text="boo"
+        android:text=""
         android:singleLine="true"
     />
 <AutoCompleteTextView android:id="@+id/share_track_recipient" 

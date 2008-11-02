@@ -30,11 +30,14 @@ import org.xmlpull.v1.XmlSerializer;
 
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnBufferingUpdateListener;
+import android.os.ConditionVariable;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
+import com.ajaxie.lastfm.PlayerService.OnBufferingListener;
+import com.ajaxie.lastfm.PlayerService.OnStartTrackListener;
 import com.ajaxie.lastfm.Utils.OptionsParser;
 
 public class PlayerThread extends Thread {
@@ -56,9 +59,7 @@ public class PlayerThread extends Thread {
 	private static final String WS_URL = "http://ws.audioscrobbler.com/1.0";
 
 	public Handler mHandler;
-	public Lock mInitLock = new ReentrantLock();
-	public boolean mInitialized = false;
-	public Condition mInitializedCondition = mInitLock.newCondition();
+	public ConditionVariable mInitLock = new ConditionVariable();
 	private String mSession;
 	private String mBaseURL;
 
@@ -90,6 +91,17 @@ public class PlayerThread extends Thread {
 
 	public XSPFTrackInfo getCurrentTrack() {
 		return mCurrentTrack;
+	}
+
+	private OnStartTrackListener mOnStartTrackListener = null;
+	private OnBufferingListener mOnBufferingListener = null;
+
+	public void setOnStartTrackListener(OnStartTrackListener mOnStartTrackListener) {
+		this.mOnStartTrackListener = mOnStartTrackListener;
+	}
+
+	public void setOnBufferingListener(OnBufferingListener mOnBufferingListener) {
+		this.mOnBufferingListener = mOnBufferingListener;
 	}
 
 	String mUsername;
@@ -184,10 +196,7 @@ public class PlayerThread extends Thread {
 
 		};
 
-		mInitialized = true;
-		mInitLock.lock();
-		mInitializedCondition.signalAll();
-		mInitLock.unlock();
+		mInitLock.open();
 		Looper.loop();
 	}
 
@@ -232,6 +241,8 @@ public class PlayerThread extends Thread {
 	OnBufferingUpdateListener mOnBufferingUpdateListener = new MediaPlayer.OnBufferingUpdateListener() {
 		@Override
 		public void onBufferingUpdate(MediaPlayer mp, int percent) {
+			if (mOnBufferingListener != null)
+				mOnBufferingListener.onBuffer(percent);
 		}
 	};
 
@@ -301,6 +312,8 @@ public class PlayerThread extends Thread {
 					.sendToTarget();
 			Message.obtain(mHandler, PlayerThread.MESSAGE_SCROBBLE_NOW_PLAYING)
 					.sendToTarget();
+			if (mOnStartTrackListener != null)
+				mOnStartTrackListener.onStartTrack(mCurrentTrack);
 		} catch (IllegalArgumentException e) {
 			Log.e(TAG, "in playNextTrack", e);
 			throw new LastFMError(e.toString());

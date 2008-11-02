@@ -1,5 +1,7 @@
 package com.ajaxie.lastfm;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -19,14 +21,17 @@ import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.AnimationUtils;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageSwitcher;
 import android.widget.ImageView;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ImageButton;
@@ -45,6 +50,8 @@ public class LastFMPlayer extends Activity {
 	public static final int MENU_SETTINGS_ID = Menu.FIRST;
 	public static final int MENU_ABOUT_ID = Menu.FIRST + 1;
 
+	protected static final String TAG = "LastFMPlayer";
+
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		boolean result = super.onCreateOptionsMenu(menu);
@@ -62,9 +69,7 @@ public class LastFMPlayer extends Activity {
 					SET_USER_INFO);
 			return true;
 		case MENU_ABOUT_ID:
-			startActivity(
-					new Intent(LastFMPlayer.this, AboutActivity.class)
-					);
+			startActivity(new Intent(LastFMPlayer.this, AboutActivity.class));
 			return true;
 		}
 
@@ -118,6 +123,47 @@ public class LastFMPlayer extends Activity {
 		}
 	};
 
+	class OnTrackStartListener implements PlayerService.OnStartTrackListener {
+
+		@Override
+		public void onStartTrack(XSPFTrackInfo track) {
+			LastFMPlayer.this.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					final ImageButton loveButton = (ImageButton) findViewById(R.id.love_button);
+					final ImageButton banButton = (ImageButton) findViewById(R.id.ban_button);
+					final ImageButton shareButton = (ImageButton) findViewById(R.id.share_button);
+					
+					loveButton.setEnabled(true);
+					banButton.setEnabled(true);
+					shareButton.setEnabled(true);
+				}
+		});
+		}		
+	}
+	
+	OnTrackStartListener mOnTrackStartListener = new OnTrackStartListener();	
+	
+	class OnBufferingListener implements PlayerService.OnBufferingListener {
+
+		@Override
+		public void onBuffer(int percent) {
+			final int percentCompleted = percent;
+			LastFMPlayer.this.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					TextView statusText = (TextView) LastFMPlayer.this
+						.findViewById(R.id.status_text);
+					
+					statusText.setText("buffering " + Integer.toString(percentCompleted) + "%");
+				}
+		});
+		}
+		
+	}
+	
+	OnBufferingListener mOnBufferingListener = new OnBufferingListener();
+	
 	class StatusRefreshTask extends TimerTask {
 
 		Bitmap prevBitmap;
@@ -133,6 +179,8 @@ public class LastFMPlayer extends Activity {
 					LastFMPlayer.this.runOnUiThread(new Runnable() {
 						@Override
 						public void run() {
+							TextView errorText = (TextView) LastFMPlayer.this
+									.findViewById(R.id.error_text);
 							TextView statusText = (TextView) LastFMPlayer.this
 									.findViewById(R.id.status_text);
 							TextView timeText = (TextView) LastFMPlayer.this
@@ -145,7 +193,17 @@ public class LastFMPlayer extends Activity {
 									.findViewById(R.id.track_name_text);
 							ImageSwitcher albumView = (ImageSwitcher) LastFMPlayer.this
 									.findViewById(R.id.album_view);
-							statusText.setText(statusString);
+							
+							if (status instanceof PlayerService.ErrorStatus)
+							{
+								statusText.setText("Error");
+								errorText.setText(statusString);
+								errorText.setVisibility(View.VISIBLE);								
+							} else
+							{
+								statusText.setText(statusString);
+								errorText.setVisibility(View.INVISIBLE);
+							}
 
 							if (status instanceof PlayerService.PlayingStatus) {
 								int pos = ((PlayerService.PlayingStatus) status)
@@ -188,6 +246,16 @@ public class LastFMPlayer extends Activity {
 		refreshTimer = new Timer();
 		refreshTimer.scheduleAtFixedRate(new StatusRefreshTask(), 1000, 1000);
 
+		final Spinner stationSpinner = (Spinner) findViewById(R.id.station_spinner);
+		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
+				this, R.array.station_types,
+				android.R.layout.simple_spinner_item);
+		adapter
+				.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+		stationSpinner.setAdapter(adapter);
+
+		final EditText stationName = (EditText) findViewById(R.id.station_name);
+
 		if (!LastFMPlayer.this.bindService(new Intent(LastFMPlayer.this,
 				PlayerService.class), mConnection, Context.BIND_AUTO_CREATE))
 			LastFMPlayer.this.showDialog(DIALOG_ERROR);
@@ -198,6 +266,12 @@ public class LastFMPlayer extends Activity {
 		final ImageButton playButton = (ImageButton) findViewById(R.id.play_button);
 		playButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
+				if (stationName.getText().toString().equals("")) {
+					stationName
+							.setError("Please enter the station name to play");
+					return;
+				}
+
 				SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 				String username = settings.getString("username", null);
 				String password = settings.getString("password", null);
@@ -206,10 +280,15 @@ public class LastFMPlayer extends Activity {
 					startActivityForResult(new Intent(LastFMPlayer.this,
 							UserInfo.class), SET_USER_INFO);
 				else {
-					final EditText stationText = (EditText) findViewById(R.id.station_url);
+					String stationUrl = getStationUrl();
 					if (mBoundService != null)
-						mBoundService.startPlaying(stationText.getText()
-								.toString());
+					{
+						SharedPreferences.Editor ed = settings.edit();
+						ed.putInt("last_station_type", stationSpinner.getSelectedItemPosition());
+						ed.putString("last_station_name", stationName.getText().toString());
+						ed.commit();
+						mBoundService.startPlaying(stationUrl);
+					}
 				}
 			}
 		});
@@ -239,14 +318,19 @@ public class LastFMPlayer extends Activity {
 		banButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				if (mBoundService != null)
+				{
 					mBoundService.banCurrentTrack();
+					banButton.setEnabled(false);
+				}
 			}
 		});
 
 		final ImageButton shareButton = (ImageButton) findViewById(R.id.share_button);
 		shareButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
-				startActivity(new Intent(LastFMPlayer.this, ShareTrackActivity.class));
+				if (mBoundService != null)
+					startActivity(new Intent(LastFMPlayer.this,
+							ShareTrackActivity.class));
 			}
 		});
 
@@ -254,7 +338,10 @@ public class LastFMPlayer extends Activity {
 		loveButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				if (mBoundService != null)
+				{
 					mBoundService.loveCurrentTrack();
+					loveButton.setEnabled(false);
+				}
 			}
 		});
 
@@ -275,6 +362,16 @@ public class LastFMPlayer extends Activity {
 				android.R.anim.fade_in));
 		albumView.setOutAnimation(AnimationUtils.loadAnimation(this,
 				android.R.anim.fade_out));
+		
+		loveButton.setEnabled(savedInstanceState.getBoolean("loveButton_enabled"));
+		banButton.setEnabled(savedInstanceState.getBoolean("banButton_enabled"));
+		shareButton.setEnabled(savedInstanceState.getBoolean("shareButton_enabled"));
+
+		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+		
+		stationSpinner.setSelection(settings.getInt("last_station_type", 0));
+		stationName.setText(settings.getString("last_station_name", ""));
+
 	}
 
 	protected void shareTrack(XSPFTrackInfo track) {
@@ -284,23 +381,69 @@ public class LastFMPlayer extends Activity {
 
 	public void onServiceStarted() {
 		if (mBoundService != null) {
+			mBoundService.setOnStartTrackListener(mOnTrackStartListener);			
 		}
 	}
 
+	private String getStationUrl() {
+		final Spinner stationSpinner = (Spinner) findViewById(R.id.station_spinner);
+		final EditText stationName = (EditText) findViewById(R.id.station_name);
+		
+		String stationUrl = "";
+		try {
+			switch (stationSpinner.getSelectedItemPosition()) {
+			case 0:
+				stationUrl = "lastfm://artist/"
+						+ URLEncoder.encode(stationName.getText()
+								.toString(), "UTF-8")
+						+ "/similarartists";
+				break;
+			case 1:
+				stationUrl = "lastfm://globaltags/"
+						+ URLEncoder.encode(stationName.getText()
+								.toString(), "UTF-8");
+				break;
+			default:
+				Log
+						.e(TAG,
+								"While composing station url: invalid station type");
+				return null;
+			}
+		} catch (UnsupportedEncodingException e) {
+			Log.e(TAG, "While composing station url", e);
+		}		
+		return stationUrl;
+	}
+	
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == SET_USER_INFO) {
 			if (resultCode == RESULT_OK) {
+				
 				SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 				String username = settings.getString("username", null);
 				String password = settings.getString("password", null);
 				if (username != null && password != null
 						&& username.length() != 0 && password.length() != 0) {
-					final EditText stationText = (EditText) findViewById(R.id.station_url);
+										
+					String stationUrl = getStationUrl();
 					if (mBoundService != null)
-						mBoundService.startPlaying(stationText.getText()
-								.toString());
+						mBoundService.startPlaying(stationUrl);
 				}
 			}
 		}
 	}
+	
+	@Override
+	protected void onSaveInstanceState(Bundle outState) {
+		super.onSaveInstanceState(outState);
+		
+		final ImageButton loveButton = (ImageButton) findViewById(R.id.love_button);
+		final ImageButton banButton = (ImageButton) findViewById(R.id.ban_button);
+		final ImageButton shareButton = (ImageButton) findViewById(R.id.share_button);		
+		
+		outState.putBoolean("loveButton_enabled", loveButton.isEnabled());
+		outState.putBoolean("banButton_enabled", banButton.isEnabled());
+		outState.putBoolean("shareButton_enabled", shareButton.isEnabled());
+	}
+	
 }

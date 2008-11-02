@@ -2,9 +2,20 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	android:orientation="vertical" android:layout_width="fill_parent"
 	android:layout_height="fill_parent">
-	<EditText android:id="@+id/station_url" android:layout_height="wrap_content"
-		android:text="lastfm://artist/offspring/similarartists" android:layout_width="wrap_content"
+	
+	<LinearLayout android:orientation="horizontal"
+		android:layout_width="fill_parent" android:layout_height="wrap_content"
+		android:layout_gravity="left">
+    <Spinner android:id="@+id/station_spinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:drawSelectorOnTop="true"
+        android:prompt="@string/station_spinner_prompt"
+    />		
+	<EditText android:id="@+id/station_name" android:layout_height="wrap_content"
+		android:text="Offspring" android:layout_width="fill_parent" android:layout_weight="1"
 		android:clickable="true" android:singleLine="true" />
+	</LinearLayout>
 
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="wrap_content" android:layout_height="wrap_content"

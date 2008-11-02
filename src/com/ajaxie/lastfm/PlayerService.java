@@ -33,12 +33,34 @@ public class PlayerService extends Service {
 					.startPlaying(stationUrl);
 		}
 	}
+	
+	public interface OnStartTrackListener {
+		void onStartTrack(XSPFTrackInfo track);
+	}
+
+	public interface OnBufferingListener {
+		void onBuffer(int percent);
+	}
+	
+	
+	
 
 	private static final String HOST = "http://ws.audioscrobbler.com";
 
 	private final IBinder mBinder = new LocalBinder();
 
 	private NotificationManager mNM;
+
+	private OnStartTrackListener mOnStartTrackListener = null;
+	private OnBufferingListener mOnBufferingListener = null;
+
+	public void setOnStartTrackListener(OnStartTrackListener onStartTrackListener) {
+		this.mOnStartTrackListener = onStartTrackListener;
+	}
+
+	public void setOnBufferingListener(OnBufferingListener onBufferingListener) {
+		this.mOnBufferingListener = onBufferingListener;
+	}
 
 	@Override
 	public IBinder onBind(Intent intent) {
@@ -64,10 +86,26 @@ public class PlayerService extends Service {
                 new Intent(this, LastFMPlayer.class), 0);
         
         notification.setLatestEventInfo(this, "LastFM Player",
-                "LastFM Player Service", contentIntent);
+                text, contentIntent);
         
         mNM.notify(PLAYER_NOTIFICATIONS, notification);
         
+	}
+	
+	public class ServiceOnStartTrackListener implements OnStartTrackListener {
+
+		OnStartTrackListener mUserListener;
+		public ServiceOnStartTrackListener(OnStartTrackListener userListener) {
+			mUserListener = userListener;
+		}
+		
+		@Override
+		public void onStartTrack(XSPFTrackInfo track) {
+			updateNotification(track.getTitle() + " by " + track.getCreator());
+			if (mUserListener != null)
+				mUserListener.onStartTrack(track);
+		}
+		
 	}
 
 	public interface Status {
@@ -149,10 +187,13 @@ public class PlayerService extends Service {
 		mPlayerThread = null;
 		mCurrentStatus = new StoppedStatus();
 		return true;
-	}
+	}	
 
 	public boolean startPlaying(String url) {
 		try {
+			if (mPlayerThread != null)
+				stopPlaying();
+
 			SharedPreferences settings = getSharedPreferences(
 					LastFMPlayer.PREFS_NAME, 0);
 			String username = settings.getString("username", null);
@@ -171,11 +212,10 @@ public class PlayerService extends Service {
 			}
 			
 			mPlayerThread = new PlayerThread(username, password, session, baseHost + basePath);
-			mPlayerThread.start();
-			mPlayerThread.mInitLock.lock();			
-			try {
-				while (!mPlayerThread.mInitialized)
-					mPlayerThread.mInitializedCondition.await();
+			mPlayerThread.setOnBufferingListener(mOnBufferingListener);
+			mPlayerThread.setOnStartTrackListener(new ServiceOnStartTrackListener(mOnStartTrackListener));
+			mPlayerThread.start();				
+				mPlayerThread.mInitLock.block();
 				Message m = Message.obtain(mPlayerThread.mHandler,
 						PlayerThread.MESSAGE_ADJUST, url);
 				m.sendToTarget();
@@ -183,19 +223,7 @@ public class PlayerService extends Service {
 				Message.obtain(mPlayerThread.mHandler,
 						PlayerThread.MESSAGE_CACHE_FRIENDS_LIST).sendToTarget();
 				updateNotification("Starting playback");
-				return true;
-			} catch (InterruptedException e) {
-				mPlayerThread.mInitLock.unlock();
-				e.printStackTrace();
-				setCurrentStatus(new ErrorStatus(
-						"Auth failed: player thread intialization interrupted"));
-				return false;
-			} catch (Exception e) {
-				mPlayerThread.mInitLock.unlock();
-				e.printStackTrace();
-				setCurrentStatus(new ErrorStatus("Auth failed: " + e.toString()));
-				return false;
-			}
+				return true;			
 		} catch (Exception e) {
 			e.printStackTrace();
 			setCurrentStatus(new ErrorStatus("Auth failed: " + e.toString()));
