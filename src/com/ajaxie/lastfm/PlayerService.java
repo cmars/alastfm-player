@@ -92,6 +92,17 @@ public class PlayerService extends Service {
         
 	}
 	
+	boolean mCurrentTrackLoved = false;
+	boolean mCurrentTrackBanned = false;
+	
+	public boolean isCurrentTrackLoved() {
+		return mCurrentTrackLoved;
+	}
+	
+	public boolean isCurrentTrackBanned() {
+		return mCurrentTrackBanned;
+	}
+	
 	public class ServiceOnStartTrackListener implements OnStartTrackListener {
 
 		OnStartTrackListener mUserListener;
@@ -102,6 +113,8 @@ public class PlayerService extends Service {
 		@Override
 		public void onStartTrack(XSPFTrackInfo track) {
 			updateNotification(track.getTitle() + " by " + track.getCreator());
+			mCurrentTrackLoved = false;
+			mCurrentTrackBanned = false;
 			if (mUserListener != null)
 				mUserListener.onStartTrack(track);
 		}
@@ -257,6 +270,7 @@ public class PlayerService extends Service {
 	
 	public void loveCurrentTrack() {
 		if (mPlayerThread != null) {
+			mCurrentTrackLoved = true;			
 			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_LOVE).sendToTarget();
 		}
 	}
@@ -277,6 +291,7 @@ public class PlayerService extends Service {
 
 	public void banCurrentTrack() {
 		if (mPlayerThread != null) {
+			mCurrentTrackBanned = true;
 			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_BAN).sendToTarget();
 		}
 	}

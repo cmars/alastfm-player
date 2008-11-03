@@ -362,11 +362,12 @@ public class LastFMPlayer extends Activity {
 				android.R.anim.fade_in));
 		albumView.setOutAnimation(AnimationUtils.loadAnimation(this,
 				android.R.anim.fade_out));
-		
-		loveButton.setEnabled(savedInstanceState.getBoolean("loveButton_enabled"));
-		banButton.setEnabled(savedInstanceState.getBoolean("banButton_enabled"));
-		shareButton.setEnabled(savedInstanceState.getBoolean("shareButton_enabled"));
-
+				
+		if (savedInstanceState != null) {
+			loveButton.setEnabled(savedInstanceState.getBoolean("loveButton_enabled", true));
+			banButton.setEnabled(savedInstanceState.getBoolean("banButton_enabled", true));
+			shareButton.setEnabled(savedInstanceState.getBoolean("shareButton_enabled", true));
+		}
 		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 		
 		stationSpinner.setSelection(settings.getInt("last_station_type", 0));
