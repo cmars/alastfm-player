@@ -36,8 +36,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
-import com.ajaxie.lastfm.PlayerService.OnBufferingListener;
-import com.ajaxie.lastfm.PlayerService.OnStartTrackListener;
+import com.ajaxie.lastfm.PlayerService.LastFMNotificationListener;
 import com.ajaxie.lastfm.Utils.OptionsParser;
 
 public class PlayerThread extends Thread {
@@ -74,6 +73,18 @@ public class PlayerThread extends Thread {
 
 	LastFMError mError = null;
 
+	public static class NotEnoughContentError extends LastFMError {
+		
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -6594205637078329839L;
+
+		public NotEnoughContentError() {
+			super("Not enough content for this station");
+		}
+	}
+	
 	public LastFMError getError() {
 		return mError;
 	}
@@ -93,15 +104,10 @@ public class PlayerThread extends Thread {
 		return mCurrentTrack;
 	}
 
-	private OnStartTrackListener mOnStartTrackListener = null;
-	private OnBufferingListener mOnBufferingListener = null;
+	private LastFMNotificationListener mLastFMNotificationListener = null;
 
-	public void setOnStartTrackListener(OnStartTrackListener mOnStartTrackListener) {
-		this.mOnStartTrackListener = mOnStartTrackListener;
-	}
-
-	public void setOnBufferingListener(OnBufferingListener mOnBufferingListener) {
-		this.mOnBufferingListener = mOnBufferingListener;
+	public void setLastFMNotificationListener(LastFMNotificationListener listener) {
+		this.mLastFMNotificationListener = listener;
 	}
 
 	String mUsername;
@@ -144,16 +150,22 @@ public class PlayerThread extends Thread {
 					case PlayerThread.MESSAGE_SHARE:
 						TrackShareParams msgParams = (TrackShareParams) msg.obj;
 						scrobblerRpcCall("recommendItem", new String[] {msgParams.mTrack.getCreator(), msgParams.mTrack.getTitle(), "track", msgParams.mRecipient, msgParams.mMessage, msgParams.mLanguage });
+						if (mLastFMNotificationListener != null)
+							mLastFMNotificationListener.onShared(true);
 						break;
 					case PlayerThread.MESSAGE_LOVE:
 						setCurrentTrackRating("L");
 						XSPFTrackInfo currentTrack = getCurrentTrack();
-						scrobblerRpcCall("loveTrack", new String[] {currentTrack.getCreator(), currentTrack.getTitle()});
+						scrobblerRpcCall("loveTrack", new String[] {currentTrack.getCreator(), currentTrack.getTitle()});						
+						if (mLastFMNotificationListener != null)
+							mLastFMNotificationListener.onLoved(true);
 						break;
 					case PlayerThread.MESSAGE_BAN:
 						setCurrentTrackRating("B");
 						XSPFTrackInfo currentTrack2 = getCurrentTrack();
 						scrobblerRpcCall("banTrack", new String[] {currentTrack2.getCreator(), currentTrack2.getTitle()});
+						if (mLastFMNotificationListener != null)
+							mLastFMNotificationListener.onBanned(true);						
 						playNextTrack();
 						break;
 					case PlayerThread.MESSAGE_SKIP:
@@ -215,6 +227,8 @@ public class PlayerThread extends Thread {
 	}
 
 	private XSPFTrackInfo getNextTrack() {
+		if (mPlaylist.size() == 0)
+			return null;
 		if (mNextPlaylistItem >= mPlaylist.size()) {
 			mPlaylist = getPlaylist();
 			mNextPlaylistItem = 1;
@@ -241,8 +255,8 @@ public class PlayerThread extends Thread {
 	OnBufferingUpdateListener mOnBufferingUpdateListener = new MediaPlayer.OnBufferingUpdateListener() {
 		@Override
 		public void onBufferingUpdate(MediaPlayer mp, int percent) {
-			if (mOnBufferingListener != null)
-				mOnBufferingListener.onBuffer(percent);
+			if (mLastFMNotificationListener != null)
+				mLastFMNotificationListener.onBuffer(percent);
 		}
 	};
 
@@ -296,6 +310,9 @@ public class PlayerThread extends Thread {
 		if (mCurrentTrack != null)
 			submitCurrentTrackDelayed();
 		mCurrentTrack = getNextTrack();
+		if (mCurrentTrack == null)
+			throw new NotEnoughContentError();
+		
 		String streamUrl = mCurrentTrack.getLocation();
 		try {
 			if (mp != null)
@@ -312,8 +329,8 @@ public class PlayerThread extends Thread {
 					.sendToTarget();
 			Message.obtain(mHandler, PlayerThread.MESSAGE_SCROBBLE_NOW_PLAYING)
 					.sendToTarget();
-			if (mOnStartTrackListener != null)
-				mOnStartTrackListener.onStartTrack(mCurrentTrack);
+			if (mLastFMNotificationListener != null)
+				mLastFMNotificationListener.onStartTrack(mCurrentTrack);
 		} catch (IllegalArgumentException e) {
 			Log.e(TAG, "in playNextTrack", e);
 			throw new LastFMError(e.toString());

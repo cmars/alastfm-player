@@ -17,8 +17,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
@@ -55,8 +57,8 @@ public class LastFMPlayer extends Activity {
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		boolean result = super.onCreateOptionsMenu(menu);
-		menu.add(0, MENU_SETTINGS_ID, 0, R.string.menu_settings);
-		menu.add(0, MENU_ABOUT_ID, 0, R.string.menu_about);
+		menu.add(0, MENU_SETTINGS_ID, 0, R.string.menu_settings).setIcon(android.R.drawable.ic_menu_preferences);		
+		menu.add(0, MENU_ABOUT_ID, 0, R.string.menu_about).setIcon(android.R.drawable.ic_menu_help);
 		return result;
 	}
 
@@ -96,7 +98,7 @@ public class LastFMPlayer extends Activity {
 
 	private PlayerService mBoundService;
 
-	private ServiceConnection mConnection = new ServiceConnection() {
+	public class LastFMServiceConnection implements ServiceConnection {
 		public void onServiceConnected(ComponentName className, IBinder service) {
 			// This is called when the connection with the service has been
 			// established, giving us the service object we can use to
@@ -123,47 +125,69 @@ public class LastFMPlayer extends Activity {
 		}
 	};
 
-	class OnTrackStartListener implements PlayerService.OnStartTrackListener {
+	class LastFMNotificationListener extends
+			PlayerService.LastFMNotificationListener {
 
 		@Override
-		public void onStartTrack(XSPFTrackInfo track) {
+		public void onLoved(boolean success) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					final ImageButton loveButton = (ImageButton) findViewById(R.id.love_button);
-					final ImageButton banButton = (ImageButton) findViewById(R.id.ban_button);
-					final ImageButton shareButton = (ImageButton) findViewById(R.id.share_button);
-					
-					loveButton.setEnabled(true);
-					banButton.setEnabled(true);
-					shareButton.setEnabled(true);
+					Toast.makeText(LastFMPlayer.this,
+							R.string.track_loved, Toast.LENGTH_SHORT)
+							.show();
 				}
-		});
-		}		
-	}
-	
-	OnTrackStartListener mOnTrackStartListener = new OnTrackStartListener();	
-	
-	class OnBufferingListener implements PlayerService.OnBufferingListener {
+			});
+		}
 
 		@Override
-		public void onBuffer(int percent) {
-			final int percentCompleted = percent;
+		public void onShared(boolean success) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
 				@Override
 				public void run() {
-					TextView statusText = (TextView) LastFMPlayer.this
-						.findViewById(R.id.status_text);
-					
-					statusText.setText("buffering " + Integer.toString(percentCompleted) + "%");
+					Toast.makeText(LastFMPlayer.this,
+							R.string.track_shared, Toast.LENGTH_SHORT)
+							.show();
 				}
-		});
+			});
+		}
+
+		@Override
+		public void onBanned(boolean success) {
+			LastFMPlayer.this.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					Toast.makeText(LastFMPlayer.this,
+							R.string.track_banned, Toast.LENGTH_SHORT)
+							.show();
+				}
+			});
 		}
 		
 	}
-	
-	OnBufferingListener mOnBufferingListener = new OnBufferingListener();
-	
+
+	void resetSongInfoDisplay() {
+		TextView statusText = (TextView) LastFMPlayer.this
+				.findViewById(R.id.status_text);
+		TextView timeText = (TextView) LastFMPlayer.this
+				.findViewById(R.id.time_counter);
+		TextView creatorText = (TextView) LastFMPlayer.this
+				.findViewById(R.id.creator_name_text);
+		TextView albumText = (TextView) LastFMPlayer.this
+				.findViewById(R.id.album_name_text);
+		TextView trackText = (TextView) LastFMPlayer.this
+				.findViewById(R.id.track_name_text);
+		ImageSwitcher albumView = (ImageSwitcher) LastFMPlayer.this
+				.findViewById(R.id.album_view);
+
+		statusText.setText("Disconnected");
+		timeText.setText("--:--");
+		creatorText.setText("");
+		albumText.setText("");
+		trackText.setText("");
+		albumView.setImageDrawable(null);
+	}
+
 	class StatusRefreshTask extends TimerTask {
 
 		Bitmap prevBitmap;
@@ -179,6 +203,8 @@ public class LastFMPlayer extends Activity {
 					LastFMPlayer.this.runOnUiThread(new Runnable() {
 						@Override
 						public void run() {
+							if (mBoundService == null)
+								return;
 							TextView errorText = (TextView) LastFMPlayer.this
 									.findViewById(R.id.error_text);
 							TextView statusText = (TextView) LastFMPlayer.this
@@ -193,14 +219,22 @@ public class LastFMPlayer extends Activity {
 									.findViewById(R.id.track_name_text);
 							ImageSwitcher albumView = (ImageSwitcher) LastFMPlayer.this
 									.findViewById(R.id.album_view);
-							
-							if (status instanceof PlayerService.ErrorStatus)
-							{
+
+							if (status instanceof PlayerService.ErrorStatus) {
 								statusText.setText("Error");
 								errorText.setText(statusString);
-								errorText.setVisibility(View.VISIBLE);								
-							} else
-							{
+								errorText.setVisibility(View.VISIBLE);
+							} else {
+								final ImageButton loveButton = (ImageButton) findViewById(R.id.love_button);
+								final ImageButton banButton = (ImageButton) findViewById(R.id.ban_button);
+								final ImageButton shareButton = (ImageButton) findViewById(R.id.share_button);
+
+								loveButton.setEnabled(!mBoundService
+										.isCurrentTrackLoved());
+								banButton.setEnabled(!mBoundService
+										.isCurrentTrackBanned());
+								shareButton.setEnabled(true);
+
 								statusText.setText(statusString);
 								errorText.setVisibility(View.INVISIBLE);
 							}
@@ -235,6 +269,13 @@ public class LastFMPlayer extends Activity {
 		}
 	}
 
+	void bindToPlayerService() {
+		if (!LastFMPlayer.this.bindService(new Intent(LastFMPlayer.this,
+				PlayerService.class), new LastFMServiceConnection(),
+				Context.BIND_AUTO_CREATE))
+			LastFMPlayer.this.showDialog(DIALOG_ERROR);
+	}
+
 	Timer refreshTimer;
 
 	/** Called when the activity is first created. */
@@ -246,6 +287,16 @@ public class LastFMPlayer extends Activity {
 		refreshTimer = new Timer();
 		refreshTimer.scheduleAtFixedRate(new StatusRefreshTask(), 1000, 1000);
 
+		TextView statusText = (TextView) LastFMPlayer.this
+				.findViewById(R.id.status_text);
+		try {
+			statusText.setText("version "
+					+ getPackageManager().getPackageInfo(this.getPackageName(),
+							0).versionName);
+		} catch (NameNotFoundException e) {
+			statusText.setText("Invalid version -- please check for update");
+		}
+
 		final Spinner stationSpinner = (Spinner) findViewById(R.id.station_spinner);
 		ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(
 				this, R.array.station_types,
@@ -256,12 +307,7 @@ public class LastFMPlayer extends Activity {
 
 		final EditText stationName = (EditText) findViewById(R.id.station_name);
 
-		if (!LastFMPlayer.this.bindService(new Intent(LastFMPlayer.this,
-				PlayerService.class), mConnection, Context.BIND_AUTO_CREATE))
-			LastFMPlayer.this.showDialog(DIALOG_ERROR);
-		Intent serviceIntent = new Intent(LastFMPlayer.this,
-				PlayerService.class);
-		LastFMPlayer.this.startService(serviceIntent);
+		bindToPlayerService();
 
 		final ImageButton playButton = (ImageButton) findViewById(R.id.play_button);
 		playButton.setOnClickListener(new View.OnClickListener() {
@@ -280,15 +326,40 @@ public class LastFMPlayer extends Activity {
 					startActivityForResult(new Intent(LastFMPlayer.this,
 							UserInfo.class), SET_USER_INFO);
 				else {
-					String stationUrl = getStationUrl();
-					if (mBoundService != null)
-					{
-						SharedPreferences.Editor ed = settings.edit();
-						ed.putInt("last_station_type", stationSpinner.getSelectedItemPosition());
-						ed.putString("last_station_name", stationName.getText().toString());
-						ed.commit();
-						mBoundService.startPlaying(stationUrl);
+					Uri stationUri = getStationUri();
+
+					SharedPreferences.Editor ed = settings.edit();
+					ed.putInt("last_station_type", stationSpinner
+							.getSelectedItemPosition());
+					ed.putString("last_station_name", stationName.getText()
+							.toString());
+					ed.commit();
+
+					Intent serviceIntent = new Intent();
+					serviceIntent.setAction(Intent.ACTION_VIEW);
+					serviceIntent.setClass(LastFMPlayer.this,
+							PlayerService.class);
+					serviceIntent.setData(stationUri);
+
+					/*
+					 * bindToPlayerService();
+					 * LastFMPlayer.this.startService(serviceIntent);
+					 */
+					if (mBoundService == null) {
+						if (!LastFMPlayer.this.bindService(serviceIntent,
+								new LastFMServiceConnection(),
+								Context.BIND_AUTO_CREATE))
+							LastFMPlayer.this.showDialog(DIALOG_ERROR);
+						LastFMPlayer.this.startService(serviceIntent);
+					} else {
+						LastFMPlayer.this.startService(serviceIntent);
+						// mBoundService.startPlaying(stationUri.toString());
 					}
+
+					/*
+					 * if (mBoundService != null)
+					 * mBoundService.startPlaying(stationUrl);
+					 */
 				}
 			}
 		});
@@ -298,10 +369,12 @@ public class LastFMPlayer extends Activity {
 			public void onClick(View v) {
 				if (mBoundService != null) {
 					mBoundService.stopPlaying();
-					LastFMPlayer.this.unbindService(mConnection);
+					// LastFMPlayer.this.unbindService(mConnection);
+					mBoundService = null;
 					Intent serviceIntent = new Intent(LastFMPlayer.this,
 							PlayerService.class);
 					LastFMPlayer.this.stopService(serviceIntent);
+					resetSongInfoDisplay();
 				}
 			}
 		});
@@ -309,7 +382,7 @@ public class LastFMPlayer extends Activity {
 		final ImageButton skipButton = (ImageButton) findViewById(R.id.skip_button);
 		skipButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
-				if (mBoundService != null)
+				if (mBoundService != null)					
 					mBoundService.skipCurrentTrack();
 			}
 		});
@@ -317,10 +390,9 @@ public class LastFMPlayer extends Activity {
 		final ImageButton banButton = (ImageButton) findViewById(R.id.ban_button);
 		banButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
-				if (mBoundService != null)
-				{
-					mBoundService.banCurrentTrack();
-					banButton.setEnabled(false);
+				if (mBoundService != null) {
+					if (mBoundService.banCurrentTrack())
+						banButton.setEnabled(false);
 				}
 			}
 		});
@@ -329,18 +401,18 @@ public class LastFMPlayer extends Activity {
 		shareButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				if (mBoundService != null)
-					startActivity(new Intent(LastFMPlayer.this,
-							ShareTrackActivity.class));
+					if (mBoundService.getCurrentStatus() instanceof PlayerService.PlayingStatus)
+						startActivity(new Intent(LastFMPlayer.this,
+								ShareTrackActivity.class));
 			}
 		});
 
 		final ImageButton loveButton = (ImageButton) findViewById(R.id.love_button);
 		loveButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
-				if (mBoundService != null)
-				{
-					mBoundService.loveCurrentTrack();
-					loveButton.setEnabled(false);
+				if (mBoundService != null) {
+					if (mBoundService.loveCurrentTrack())
+						loveButton.setEnabled(false);
 				}
 			}
 		});
@@ -362,14 +434,17 @@ public class LastFMPlayer extends Activity {
 				android.R.anim.fade_in));
 		albumView.setOutAnimation(AnimationUtils.loadAnimation(this,
 				android.R.anim.fade_out));
-				
+
 		if (savedInstanceState != null) {
-			loveButton.setEnabled(savedInstanceState.getBoolean("loveButton_enabled", true));
-			banButton.setEnabled(savedInstanceState.getBoolean("banButton_enabled", true));
-			shareButton.setEnabled(savedInstanceState.getBoolean("shareButton_enabled", true));
+			loveButton.setEnabled(savedInstanceState.getBoolean(
+					"loveButton_enabled", true));
+			banButton.setEnabled(savedInstanceState.getBoolean(
+					"banButton_enabled", true));
+			shareButton.setEnabled(savedInstanceState.getBoolean(
+					"shareButton_enabled", true));
 		}
 		SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-		
+
 		stationSpinner.setSelection(settings.getInt("last_station_type", 0));
 		stationName.setText(settings.getString("last_station_name", ""));
 
@@ -382,69 +457,67 @@ public class LastFMPlayer extends Activity {
 
 	public void onServiceStarted() {
 		if (mBoundService != null) {
-			mBoundService.setOnStartTrackListener(mOnTrackStartListener);			
+			mBoundService
+					.setLastFMNotificationListener(new LastFMNotificationListener());
 		}
 	}
 
-	private String getStationUrl() {
+	private Uri getStationUri() {
 		final Spinner stationSpinner = (Spinner) findViewById(R.id.station_spinner);
 		final EditText stationName = (EditText) findViewById(R.id.station_name);
-		
-		String stationUrl = "";
-		try {
-			switch (stationSpinner.getSelectedItemPosition()) {
-			case 0:
-				stationUrl = "lastfm://artist/"
-						+ URLEncoder.encode(stationName.getText()
-								.toString(), "UTF-8")
-						+ "/similarartists";
-				break;
-			case 1:
-				stationUrl = "lastfm://globaltags/"
-						+ URLEncoder.encode(stationName.getText()
-								.toString(), "UTF-8");
-				break;
-			default:
-				Log
-						.e(TAG,
-								"While composing station url: invalid station type");
-				return null;
-			}
-		} catch (UnsupportedEncodingException e) {
-			Log.e(TAG, "While composing station url", e);
-		}		
-		return stationUrl;
+
+		Uri.Builder builder = new Uri.Builder();
+		builder.scheme("lastfm");
+		switch (stationSpinner.getSelectedItemPosition()) {
+		case 0:
+			builder.authority("artist");
+			builder.appendPath(stationName.getText().toString());
+			builder.appendPath("similarartists");
+			builder.fragment("");
+			builder.query("");
+			return builder.build();
+		case 1:
+			builder.authority("globaltags");
+			builder.appendPath(stationName.getText().toString());
+			builder.fragment("");
+			builder.query("");
+			return builder.build();
+		default:
+			Log.e(TAG, "While composing station url: invalid station type");
+			return null;
+		}
 	}
-	
+
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == SET_USER_INFO) {
 			if (resultCode == RESULT_OK) {
-				
+
 				SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 				String username = settings.getString("username", null);
 				String password = settings.getString("password", null);
 				if (username != null && password != null
 						&& username.length() != 0 && password.length() != 0) {
-										
-					String stationUrl = getStationUrl();
-					if (mBoundService != null)
-						mBoundService.startPlaying(stationUrl);
+
+					Uri stationUri = getStationUri();
+					Intent serviceIntent = new Intent("play", stationUri,
+							LastFMPlayer.this, PlayerService.class);
+					LastFMPlayer.this.startService(serviceIntent);
 				}
 			}
 		}
 	}
-	
+
 	@Override
 	protected void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
-		
+
 		final ImageButton loveButton = (ImageButton) findViewById(R.id.love_button);
 		final ImageButton banButton = (ImageButton) findViewById(R.id.ban_button);
-		final ImageButton shareButton = (ImageButton) findViewById(R.id.share_button);		
-		
+		final ImageButton shareButton = (ImageButton) findViewById(R.id.share_button);
+
 		outState.putBoolean("loveButton_enabled", loveButton.isEnabled());
 		outState.putBoolean("banButton_enabled", banButton.isEnabled());
 		outState.putBoolean("shareButton_enabled", shareButton.isEnabled());
 	}
-	
+
 }

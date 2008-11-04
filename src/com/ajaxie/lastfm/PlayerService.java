@@ -17,6 +17,7 @@ import android.content.SharedPreferences;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Message;
+import android.util.Log;
 
 public class PlayerService extends Service {
 	/**
@@ -34,36 +35,31 @@ public class PlayerService extends Service {
 		}
 	}
 	
-	public interface OnStartTrackListener {
-		void onStartTrack(XSPFTrackInfo track);
+	public static class LastFMNotificationListener {
+		public void onStartTrack(XSPFTrackInfo track) {}
+		public void onBuffer(int percent) {}
+		public void onLoved(boolean success) {}
+		public void onBanned(boolean success) {}
+		public void onShared(boolean success) {}
 	}
-
-	public interface OnBufferingListener {
-		void onBuffer(int percent);
-	}
-	
-	
-	
-
+		
 	private static final String HOST = "http://ws.audioscrobbler.com";
+
+	private static final String TAG = "PlayerService";
 
 	private final IBinder mBinder = new LocalBinder();
 
 	private NotificationManager mNM;
 
-	private OnStartTrackListener mOnStartTrackListener = null;
-	private OnBufferingListener mOnBufferingListener = null;
+	private LastFMNotificationListener mLastFMNotificationListener = null;
 
-	public void setOnStartTrackListener(OnStartTrackListener onStartTrackListener) {
-		this.mOnStartTrackListener = onStartTrackListener;
-	}
-
-	public void setOnBufferingListener(OnBufferingListener onBufferingListener) {
-		this.mOnBufferingListener = onBufferingListener;
+	public void setLastFMNotificationListener(LastFMNotificationListener listener) {
+		this.mLastFMNotificationListener = listener;
 	}
 
 	@Override
 	public IBinder onBind(Intent intent) {
+//		handleIntent(intent);
 		return mBinder;
 	}
 
@@ -103,10 +99,10 @@ public class PlayerService extends Service {
 		return mCurrentTrackBanned;
 	}
 	
-	public class ServiceOnStartTrackListener implements OnStartTrackListener {
+	public class ServiceNotificationListener extends LastFMNotificationListener {
 
-		OnStartTrackListener mUserListener;
-		public ServiceOnStartTrackListener(OnStartTrackListener userListener) {
+		LastFMNotificationListener mUserListener;
+		public ServiceNotificationListener(LastFMNotificationListener userListener) {
 			mUserListener = userListener;
 		}
 		
@@ -115,10 +111,28 @@ public class PlayerService extends Service {
 			updateNotification(track.getTitle() + " by " + track.getCreator());
 			mCurrentTrackLoved = false;
 			mCurrentTrackBanned = false;
+			mCurrentStatus = new PlayingStatus(0, track);
 			if (mUserListener != null)
 				mUserListener.onStartTrack(track);
 		}
 		
+		@Override
+		public void onBanned(boolean success) {
+			if (mUserListener != null)
+				mUserListener.onBanned(success);
+		}
+
+		@Override
+		public void onLoved(boolean success) {
+			if (mUserListener != null)
+				mUserListener.onLoved(success);
+		}
+
+		@Override
+		public void onShared(boolean success) {
+			if (mUserListener != null)
+				mUserListener.onShared(success);
+		}		
 	}
 
 	public interface Status {
@@ -145,11 +159,21 @@ public class PlayerService extends Service {
 		public XSPFTrackInfo getCurrentTrack() {
 			return trackInfo;
 		}
+
+		public void setCurrentPosition(int currentPosition) {
+			position = currentPosition;
+		}
 	}
 
 	public class StoppedStatus implements Status {
 		public String toString() {
 			return "stopped";
+		}
+	}
+
+	public class ConnectingStatus implements Status {
+		public String toString() {
+			return "connecting..";
 		}
 	}
 
@@ -182,7 +206,11 @@ public class PlayerService extends Service {
 				mCurrentStatus = new ErrorStatus(mPlayerThread.getError()
 						.toString());
 			else
-				mCurrentStatus = new PlayingStatus(mPlayerThread.getCurrentPosition(), mPlayerThread.getCurrentTrack());
+			{
+				Status curStatus = mCurrentStatus;
+				if (curStatus instanceof PlayingStatus)
+					((PlayingStatus)curStatus).setCurrentPosition(mPlayerThread.getCurrentPosition());
+			}
 		return mCurrentStatus;
 	}
 
@@ -192,7 +220,9 @@ public class PlayerService extends Service {
 		Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_STOP)
 				.sendToTarget();
 		try {
-			mPlayerThread.join();
+			mPlayerThread.join(10000);
+			if (mPlayerThread.isAlive())
+				mPlayerThread.stop();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 			return false;
@@ -201,6 +231,22 @@ public class PlayerService extends Service {
 		mCurrentStatus = new StoppedStatus();
 		return true;
 	}	
+	
+	@Override
+	public void onStart(Intent intent, int startId) {
+		super.onStart(intent, startId);
+		handleIntent(intent);
+	}
+	
+	void handleIntent(Intent intent) {
+		if (intent.getAction() == null)
+			return;
+		if (intent.getAction().equals(Intent.ACTION_VIEW))
+		{			
+			startPlaying(intent.getDataString());
+		} else
+			Log.e(TAG, "Invalid service intent action: " + intent.getAction());		
+	}
 
 	public boolean startPlaying(String url) {
 		try {
@@ -225,8 +271,7 @@ public class PlayerService extends Service {
 			}
 			
 			mPlayerThread = new PlayerThread(username, password, session, baseHost + basePath);
-			mPlayerThread.setOnBufferingListener(mOnBufferingListener);
-			mPlayerThread.setOnStartTrackListener(new ServiceOnStartTrackListener(mOnStartTrackListener));
+			mPlayerThread.setLastFMNotificationListener(new ServiceNotificationListener(mLastFMNotificationListener));
 			mPlayerThread.start();				
 				mPlayerThread.mInitLock.block();
 				Message m = Message.obtain(mPlayerThread.mHandler,
@@ -236,6 +281,7 @@ public class PlayerService extends Service {
 				Message.obtain(mPlayerThread.mHandler,
 						PlayerThread.MESSAGE_CACHE_FRIENDS_LIST).sendToTarget();
 				updateNotification("Starting playback");
+				mCurrentStatus = new ConnectingStatus();
 				return true;			
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -262,17 +308,21 @@ public class PlayerService extends Service {
 			return options;
 	}
 
-	public void skipCurrentTrack() {
+	public boolean skipCurrentTrack() {
 		if (mPlayerThread != null) {
 			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_SKIP).sendToTarget();
-		}
+			return true;
+		} else
+			return false;
 	}
 	
-	public void loveCurrentTrack() {
+	public boolean loveCurrentTrack() {
 		if (mPlayerThread != null) {
 			mCurrentTrackLoved = true;			
 			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_LOVE).sendToTarget();
-		}
+			return true;
+		} else
+			return false;
 	}
 	
 	public final ArrayList<FriendInfo> getFriendsList() {
@@ -282,18 +332,22 @@ public class PlayerService extends Service {
 			return null;
 	}	
 
-	public void shareTrack(XSPFTrackInfo track, String recipient, String message) {
+	public boolean shareTrack(XSPFTrackInfo track, String recipient, String message) {
 		if (mPlayerThread != null) {
 			PlayerThread.TrackShareParams msgParams = new PlayerThread.TrackShareParams(track, recipient, message, "en");
 			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_SHARE, msgParams).sendToTarget();
-		}
+			return true;
+		} else
+			return false;
 	}
 
-	public void banCurrentTrack() {
+	public boolean banCurrentTrack() {
 		if (mPlayerThread != null) {
 			mCurrentTrackBanned = true;
 			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_BAN).sendToTarget();
-		}
+			return true;
+		} else
+			return false;
 	}
 
 }
