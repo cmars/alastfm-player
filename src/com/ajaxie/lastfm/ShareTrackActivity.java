@@ -75,7 +75,7 @@ public class ShareTrackActivity extends Activity {
                 final AutoCompleteTextView recipientText = (AutoCompleteTextView)findViewById(R.id.share_track_recipient);
                 final EditText messageText = (EditText)findViewById(R.id.share_track_message); 
                 if (recipientText.getText().toString().equals("")) {
-                	recipientText.setError("Please enter recipient nickname");
+                	recipientText.setError("Please enter recipient nickname or email address");
                 	recipientText.requestFocus();
                 } else {
                 	mBoundService.shareTrack(mTrack, recipientText.getText().toString(), messageText.getText().toString());                

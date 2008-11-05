@@ -18,8 +18,10 @@
 
 <string name="username">Username</string>
 <string name="password">Password</string>
-<string name="signup">Don't have a last.fm username? Register at http://last.fm/join</string>
+<string name="signup">Don&apos;t have a last.fm username? Register at http://last.fm/join</string>
 <string name="track_loved">Track loved</string>
 <string name="track_banned">Track banned</string>
 <string name="track_shared">Track shared</string>
+<string name="message">Message</string>
+<string name="with">with</string>
 </resources>

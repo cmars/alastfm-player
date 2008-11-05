@@ -40,7 +40,7 @@ public class ScrobblerClient {
 			InputStreamReader reader = new InputStreamReader(is);
 			stringReader = new BufferedReader(reader);
 			String res = stringReader.readLine();
-			if (res.equals("OK"))
+			if (res != null && res.equals("OK"))
 			{
 				mSessionId = stringReader.readLine();
 				mNowPlayingUrl = stringReader.readLine();

@@ -24,9 +24,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.View.OnKeyListener;
 import android.view.animation.AnimationUtils;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -120,7 +122,7 @@ public class LastFMPlayer extends Activity {
 			// see this happen.
 			mBoundService = null;
 			Toast.makeText(LastFMPlayer.this,
-					R.string.local_service_disconnected, Toast.LENGTH_SHORT)
+					R.string.local_service_disconnected, Toast.LENGTH_LONG)
 					.show();
 		}
 	};
@@ -129,34 +131,49 @@ public class LastFMPlayer extends Activity {
 			PlayerService.LastFMNotificationListener {
 
 		@Override
-		public void onLoved(boolean success) {
+		public void onLoved(final boolean success, final String message) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
 				public void run() {
+					if (success)
 					Toast.makeText(LastFMPlayer.this,
 							R.string.track_loved, Toast.LENGTH_SHORT)
 							.show();
+					else
+						Toast.makeText(LastFMPlayer.this,								
+								"Love failed: " + message, Toast.LENGTH_LONG)
+								.show();						
 				}
 			});
 		}
 
 		@Override
-		public void onShared(boolean success) {
+		public void onShared(final boolean success, final String message) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
 				public void run() {
+					if (success)
 					Toast.makeText(LastFMPlayer.this,
 							R.string.track_shared, Toast.LENGTH_SHORT)
 							.show();
+					else
+						Toast.makeText(LastFMPlayer.this,								
+								"Share failed: " + message, Toast.LENGTH_LONG)
+								.show();						
 				}
 			});
 		}
 
 		@Override
-		public void onBanned(boolean success) {
+		public void onBanned(final boolean success, final String message) {			
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
 				public void run() {
-					Toast.makeText(LastFMPlayer.this,
-							R.string.track_banned, Toast.LENGTH_SHORT)
-							.show();
+					if (success)
+						Toast.makeText(LastFMPlayer.this,
+								R.string.track_banned, Toast.LENGTH_SHORT)
+								.show();
+					else
+						Toast.makeText(LastFMPlayer.this,								
+								"Ban failed: " + message, Toast.LENGTH_SHORT)
+								.show();						
 				}
 			});
 		}
@@ -305,10 +322,16 @@ public class LastFMPlayer extends Activity {
 		final EditText stationName = (EditText) findViewById(R.id.station_name);
 
 		bindToPlayerService();
-
+		
 		final ImageButton playButton = (ImageButton) findViewById(R.id.play_button);
-		playButton.setOnClickListener(new View.OnClickListener() {
+		final View.OnClickListener onPlayClickListener = new View.OnClickListener() {
 			public void onClick(View v) {
+				if (mBoundService != null &&
+						(mBoundService.getCurrentStatus() != null) 
+						&&
+						!(mBoundService.getCurrentStatus() instanceof PlayerService.StoppedStatus))
+					return;
+				
 				if (stationName.getText().toString().equals("")) {
 					stationName
 							.setError("Please enter the station name to play");
@@ -359,8 +382,21 @@ public class LastFMPlayer extends Activity {
 					 */
 				}
 			}
-		});
+		};
+		playButton.setOnClickListener(onPlayClickListener);
 
+		stationName.setOnKeyListener(new OnKeyListener() {
+			@Override
+			public boolean onKey(View v, int keyCode, KeyEvent event) {
+				if (keyCode == KeyEvent.KEYCODE_ENTER)
+				{
+					onPlayClickListener.onClick(stationName);
+					return true;
+				} else
+					return false;
+			}			
+		});
+		
 		final ImageButton stopButton = (ImageButton) findViewById(R.id.stop_button);
 		stopButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {

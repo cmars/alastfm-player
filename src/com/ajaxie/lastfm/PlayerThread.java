@@ -36,6 +36,7 @@ import android.os.Looper;
 import android.os.Message;
 import android.util.Log;
 
+import com.ajaxie.lastfm.PlayerService.ErrorStatus;
 import com.ajaxie.lastfm.PlayerService.LastFMNotificationListener;
 import com.ajaxie.lastfm.Utils.OptionsParser;
 import com.ajaxie.lastfm.Utils.ParseException;
@@ -53,6 +54,7 @@ public class PlayerThread extends Thread {
 	public static final int MESSAGE_BAN = 8;
 	public static final int MESSAGE_SHARE = 9;
 	public static final int MESSAGE_CACHE_FRIENDS_LIST = 10;
+	public static final int MESSAGE_LOGIN = 11;
 
 	private static final String TAG = "PlayerThread";
 	private static final String XMLRPC_URL = "http://ws.audioscrobbler.com/1.0/rw/xmlrpc.php";
@@ -75,7 +77,7 @@ public class PlayerThread extends Thread {
 	LastFMError mError = null;
 
 	public static class NotEnoughContentError extends LastFMError {
-		
+
 		/**
 		 * 
 		 */
@@ -85,23 +87,24 @@ public class PlayerThread extends Thread {
 			super("Not enough content for this station");
 		}
 	}
-	
+
 	public static class LastFMXmlRpcError extends LastFMError {
 		/**
 		 * 
 		 */
 		private static final long serialVersionUID = 1L;
 		String faultString = "";
-		
+
 		public LastFMXmlRpcError(String faultString) {
 			super("XmlRPC error: " + faultString);
+			this.faultString = faultString;
 		}
-		
+
 		public String getFaultString() {
 			return faultString;
 		}
 	}
-	
+
 	public LastFMError getError() {
 		return mError;
 	}
@@ -123,23 +126,19 @@ public class PlayerThread extends Thread {
 
 	private LastFMNotificationListener mLastFMNotificationListener = null;
 
-	public void setLastFMNotificationListener(LastFMNotificationListener listener) {
+	public void setLastFMNotificationListener(
+			LastFMNotificationListener listener) {
 		this.mLastFMNotificationListener = listener;
 	}
 
 	String mUsername;
 	String mPassword;
 	protected ArrayList<FriendInfo> mFriendsList;
-	
-	public PlayerThread(String username, String password, String session,
-			String baseURL) {
+
+	public PlayerThread(String username, String password) {
 		super();
-		mSession = session;
-		mBaseURL = baseURL;
 		mUsername = username;
 		mPassword = password;
-		mScrobbler = new ScrobblerClient();
-		mScrobbler.handshake(username, password);
 	}
 
 	public void run() {
@@ -149,6 +148,10 @@ public class PlayerThread extends Thread {
 			public void handleMessage(Message msg) {
 				try {
 					switch (msg.what) {
+					case PlayerThread.MESSAGE_LOGIN:
+						if (!login(mUsername, mPassword))
+							getLooper().quit();
+						break;
 					case PlayerThread.MESSAGE_STOP:
 						stopPlaying();
 						getLooper().quit();
@@ -165,24 +168,53 @@ public class PlayerThread extends Thread {
 								.getDuration());
 						break;
 					case PlayerThread.MESSAGE_SHARE:
-						TrackShareParams msgParams = (TrackShareParams) msg.obj;
-						scrobblerRpcCall("recommendItem", new String[] {msgParams.mTrack.getCreator(), msgParams.mTrack.getTitle(), "track", msgParams.mRecipient, msgParams.mMessage, msgParams.mLanguage });
-						if (mLastFMNotificationListener != null)
-							mLastFMNotificationListener.onShared(true);
+						try {
+							TrackShareParams msgParams = (TrackShareParams) msg.obj;
+							scrobblerRpcCall("recommendItem", new String[] {
+									msgParams.mTrack.getCreator(),
+									msgParams.mTrack.getTitle(), "track",
+									msgParams.mRecipient, msgParams.mMessage,
+									msgParams.mLanguage });
+							if (mLastFMNotificationListener != null)
+								mLastFMNotificationListener
+										.onShared(true, null);
+						} catch (LastFMXmlRpcError e) {
+							if (mLastFMNotificationListener != null)
+								mLastFMNotificationListener.onShared(false,
+										e.faultString);
+						}
+
 						break;
 					case PlayerThread.MESSAGE_LOVE:
-						setCurrentTrackRating("L");
-						XSPFTrackInfo currentTrack = getCurrentTrack();
-						scrobblerRpcCall("loveTrack", new String[] {currentTrack.getCreator(), currentTrack.getTitle()});						
-						if (mLastFMNotificationListener != null)
-							mLastFMNotificationListener.onLoved(true);
+						try {
+							setCurrentTrackRating("L");
+							XSPFTrackInfo currentTrack = getCurrentTrack();
+							scrobblerRpcCall("loveTrack", new String[] {
+									currentTrack.getCreator(),
+									currentTrack.getTitle() });
+							if (mLastFMNotificationListener != null)
+								mLastFMNotificationListener.onLoved(true, null);
+						} catch (LastFMXmlRpcError e) {
+							if (mLastFMNotificationListener != null)
+								mLastFMNotificationListener.onLoved(false,
+										e.faultString);
+						}
 						break;
 					case PlayerThread.MESSAGE_BAN:
-						setCurrentTrackRating("B");
-						XSPFTrackInfo currentTrack2 = getCurrentTrack();
-						scrobblerRpcCall("banTrack", new String[] {currentTrack2.getCreator(), currentTrack2.getTitle()});
-						if (mLastFMNotificationListener != null)
-							mLastFMNotificationListener.onBanned(true);						
+						try {
+							setCurrentTrackRating("B");
+							XSPFTrackInfo currentTrack2 = getCurrentTrack();
+							scrobblerRpcCall("banTrack", new String[] {
+									currentTrack2.getCreator(),
+									currentTrack2.getTitle() });
+							if (mLastFMNotificationListener != null)
+								mLastFMNotificationListener
+										.onBanned(true, null);
+						} catch (LastFMXmlRpcError e) {
+							if (mLastFMNotificationListener != null)
+								mLastFMNotificationListener.onBanned(false,
+										e.faultString);
+						}
 						playNextTrack();
 						break;
 					case PlayerThread.MESSAGE_SKIP:
@@ -225,6 +257,8 @@ public class PlayerThread extends Thread {
 
 		};
 
+		Message.obtain(mHandler, PlayerThread.MESSAGE_LOGIN).sendToTarget();
+
 		mInitLock.open();
 		Looper.loop();
 	}
@@ -238,7 +272,7 @@ public class PlayerThread extends Thread {
 			mp.stop();
 		return true;
 	}
-	
+
 	public final ArrayList<FriendInfo> getFriendsList() {
 		return mFriendsList;
 	}
@@ -291,13 +325,13 @@ public class PlayerThread extends Thread {
 	}
 
 	public static class TrackShareParams {
-		public XSPFTrackInfo mTrack;		
+		public XSPFTrackInfo mTrack;
 		public String mRecipient;
 		public String mMessage;
 		public String mLanguage;
 
-		public TrackShareParams(XSPFTrackInfo track,
-				String recipient, String message, String language) {
+		public TrackShareParams(XSPFTrackInfo track, String recipient,
+				String message, String language) {
 			mTrack = track;
 			mMessage = message;
 			mRecipient = recipient;
@@ -329,7 +363,7 @@ public class PlayerThread extends Thread {
 		mCurrentTrack = getNextTrack();
 		if (mCurrentTrack == null)
 			throw new NotEnoughContentError();
-		
+
 		String streamUrl = mCurrentTrack.getLocation();
 		try {
 			if (mp != null)
@@ -364,11 +398,12 @@ public class PlayerThread extends Thread {
 		Message.obtain(mHandler, PlayerThread.MESSAGE_UPDATE_PLAYLIST)
 				.sendToTarget();
 	}
-	
+
 	private ArrayList<FriendInfo> downloadFriendsList() {
 		try {
 			URL url;
-			url = new URL(WS_URL + "/user/" + URLEncoder.encode(mUsername, "UTF-8") + "/friends.xml");
+			url = new URL(WS_URL + "/user/"
+					+ URLEncoder.encode(mUsername, "UTF-8") + "/friends.xml");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.connect();
 			InputStream is = conn.getInputStream();
@@ -391,8 +426,8 @@ public class PlayerThread extends Thread {
 		} catch (Exception e) {
 			Log.e(TAG, "in downloadFriendsList", e);
 			return null;
-		} 		
-	}	
+		}
+	}
 
 	private ArrayList<XSPFTrackInfo> getPlaylist() {
 		try {
@@ -421,7 +456,7 @@ public class PlayerThread extends Thread {
 		} catch (Exception e) {
 			Log.e(TAG, "in getPlaylist", e);
 			return null;
-		} 
+		}
 	}
 
 	private boolean adjust(String stationUrl) throws LastFMError {
@@ -442,7 +477,9 @@ public class PlayerThread extends Thread {
 			if ("OK".equals(options.get("response")))
 				return true;
 			else {
-				Log.e(TAG, "Adjust failed: \"" + options.get("response") + "\"");				
+				Log
+						.e(TAG, "Adjust failed: \"" + options.get("response")
+								+ "\"");
 				return false;
 			}
 		} catch (MalformedURLException e) {
@@ -460,18 +497,66 @@ public class PlayerThread extends Thread {
 	void scrobblerRpcCall(String method, String[] params) throws LastFMError {
 		String timestamp = Long.toString(System.currentTimeMillis() / 1000);
 		String auth = Utils.md5String(Utils.md5String(mPassword) + timestamp);
-		
+
 		String[] authParams = new String[3 + params.length];
-		
+
 		authParams[0] = mUsername;
 		authParams[1] = timestamp;
 		authParams[2] = auth;
 		for (int i = 0; i < params.length; i++)
-			authParams[i+3] = params[i];
-		
+			authParams[i + 3] = params[i];
+
 		xmlRpcCall(method, authParams);
 	}
-	
+
+	private static final String HOST = "http://ws.audioscrobbler.com";
+
+	boolean login(String username, String password) {
+		try {
+			Utils.OptionsParser opts;
+			opts = handshake(username, password);
+			String session = opts.get("session");
+			String baseHost = opts.get("base_url");
+			String basePath = opts.get("base_path");
+			if (session == null || session.equals("FAILED") || baseHost == null
+					|| basePath == null) {
+				String message = opts.get("msg");
+				if (message == null)
+					message = "";
+				setErrorState(new LastFMError("Auth failed: " + message));
+				return false;
+			}
+			mSession = session;
+			mBaseURL = baseHost + basePath;
+			
+			mScrobbler = new ScrobblerClient();
+			mScrobbler.handshake(username, password);			
+			return true;
+		} catch (IOException e) {
+			setErrorState(new LastFMError("Auth failed: " + e.toString()));
+			return false;
+		}
+	}
+
+	Utils.OptionsParser handshake(String Username, String Pass)
+			throws IOException {
+		String passMD5 = Utils.md5String(Pass);
+		URL url = new URL(
+				HOST
+						+ "/radio/handshake.php?version=1.0.0.0&platform=windows&username="
+						+ Username + "&passwordmd5=" + passMD5);
+		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+		conn.connect();
+		InputStream is = conn.getInputStream();
+		InputStreamReader reader = new InputStreamReader(is);
+		BufferedReader stringReader = new BufferedReader(reader);
+		Utils.OptionsParser options = new Utils.OptionsParser(stringReader);
+		if (!options.parse())
+			options = null;
+		stringReader.close();
+		return options;
+	}
+
 	static void xmlRpcCall(String method, String[] params) throws LastFMError {
 		try {
 			XmlPullParserFactory fac = XmlPullParserFactory.newInstance();
@@ -509,23 +594,26 @@ public class PlayerThread extends Thread {
 			DocumentBuilderFactory dbFac = DocumentBuilderFactory.newInstance();
 			DocumentBuilder db = dbFac.newDocumentBuilder();
 			Document doc = db.parse(is);
-			
-			try { 
-			String res = Utils.getChildElement(doc.getDocumentElement(),
-					new String[] {"params", "param", "value", "string"});
-			if (!res.equals("OK"))
-			{
-				Log.e(TAG, "while xmlrpc got " + res);
-				throw new LastFMXmlRpcError("XMLRPC Call failed: " + res);
-			}
+
+			try {
+				String res = Utils.getChildElement(doc.getDocumentElement(),
+						new String[] { "params", "param", "value", "string" });
+				if (!res.equals("OK")) {
+					Log.e(TAG, "while xmlrpc got " + res);
+					throw new LastFMXmlRpcError("XMLRPC Call failed: " + res);
+				}
 			} catch (ParseException e) {
-				String faultString = Utils.getChildElement(doc.getDocumentElement(),
-						new String[] {"params", "param", "value", "struct", "member[1]", "value", "string"});				
+				String faultString = Utils.getChildElement(doc
+						.getDocumentElement(), new String[] { "params",
+						"param", "value", "struct", "member[1]", "value",
+						"string" });
 				throw new LastFMXmlRpcError(faultString);
 			}
+		} catch (LastFMXmlRpcError e) {
+			throw e;
 		} catch (Exception e) {
 			Log.e(TAG, "while xmlrpc", e);
 			throw new LastFMError(e.toString());
-		} 
+		}
 	}
 }

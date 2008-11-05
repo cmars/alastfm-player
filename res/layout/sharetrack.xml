@@ -18,10 +18,23 @@
         android:text=""
         android:singleLine="true"
     />
+
+    <TextView
+        android:layout_width="fill_parent" android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:paddingBottom="4dip"
+        android:paddingTop="15dip"
+        android:text="@string/with"/>    
 <AutoCompleteTextView android:id="@+id/share_track_recipient" 
     android:layout_height="wrap_content" 
     android:text=""
     android:layout_width="fill_parent"/>
+
+    <TextView
+        android:layout_width="fill_parent" android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:paddingBottom="4dip"
+        android:text="@string/message"/>    
 
     <EditText android:id="@+id/share_track_message"
         android:layout_width="fill_parent"

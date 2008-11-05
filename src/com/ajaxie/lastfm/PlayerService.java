@@ -30,20 +30,26 @@ public class PlayerService extends Service {
 		}
 
 		public boolean startPlaying(String stationUrl) {
-			return PlayerService.this
-					.startPlaying(stationUrl);
+			return PlayerService.this.startPlaying(stationUrl);
 		}
 	}
-	
+
 	public static class LastFMNotificationListener {
-		public void onStartTrack(XSPFTrackInfo track) {}
-		public void onBuffer(int percent) {}
-		public void onLoved(boolean success) {}
-		public void onBanned(boolean success) {}
-		public void onShared(boolean success) {}
+		public void onStartTrack(XSPFTrackInfo track) {
+		}
+
+		public void onBuffer(int percent) {
+		}
+
+		public void onLoved(boolean success, String message) {
+		}
+
+		public void onBanned(boolean success, String message) {
+		}
+
+		public void onShared(boolean success, String message) {
+		}
 	}
-		
-	private static final String HOST = "http://ws.audioscrobbler.com";
 
 	private static final String TAG = "PlayerService";
 
@@ -53,59 +59,63 @@ public class PlayerService extends Service {
 
 	private LastFMNotificationListener mLastFMNotificationListener = null;
 
-	public void setLastFMNotificationListener(LastFMNotificationListener listener) {
+	public void setLastFMNotificationListener(
+			LastFMNotificationListener listener) {
 		this.mLastFMNotificationListener = listener;
 	}
 
 	@Override
 	public IBinder onBind(Intent intent) {
-//		handleIntent(intent);
+		// handleIntent(intent);
 		return mBinder;
 	}
 
-    private static int PLAYER_NOTIFICATIONS = 1;
+	private static int PLAYER_NOTIFICATIONS = 1;
 
 	@Override
 	public void onCreate() {
-        mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);		
+		mNM = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
 	}
 
 	@Override
 	public void onDestroy() {
 		stopPlaying();
-        mNM.cancel(PLAYER_NOTIFICATIONS);
+		mNM.cancel(PLAYER_NOTIFICATIONS);
 	}
-	
+
 	private void updateNotification(String text) {
-        Notification notification = new Notification(R.drawable.play, null, System.currentTimeMillis());
-        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-                new Intent(this, LastFMPlayer.class), 0);
-        
-        notification.setLatestEventInfo(this, "LastFM Player",
-                text, contentIntent);
-        
-        mNM.notify(PLAYER_NOTIFICATIONS, notification);
-        
+		Notification notification = new Notification(R.drawable.play, null,
+				System.currentTimeMillis());
+		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+				new Intent(this, LastFMPlayer.class), 0);
+
+		notification.setLatestEventInfo(this, "aLastFM Player", text,
+				contentIntent);
+
+		mNM.notify(PLAYER_NOTIFICATIONS, notification);
+
 	}
-	
+
 	boolean mCurrentTrackLoved = false;
 	boolean mCurrentTrackBanned = false;
-	
+
 	public boolean isCurrentTrackLoved() {
 		return mCurrentTrackLoved;
 	}
-	
+
 	public boolean isCurrentTrackBanned() {
 		return mCurrentTrackBanned;
 	}
-	
+
 	public class ServiceNotificationListener extends LastFMNotificationListener {
 
 		LastFMNotificationListener mUserListener;
-		public ServiceNotificationListener(LastFMNotificationListener userListener) {
+
+		public ServiceNotificationListener(
+				LastFMNotificationListener userListener) {
 			mUserListener = userListener;
 		}
-		
+
 		@Override
 		public void onStartTrack(XSPFTrackInfo track) {
 			updateNotification(track.getTitle() + " by " + track.getCreator());
@@ -115,24 +125,31 @@ public class PlayerService extends Service {
 			if (mUserListener != null)
 				mUserListener.onStartTrack(track);
 		}
-		
+
 		@Override
-		public void onBanned(boolean success) {
+		public void onBanned(boolean success, String message) {
 			if (mUserListener != null)
-				mUserListener.onBanned(success);
+				mUserListener.onBanned(success, message);
 		}
 
 		@Override
-		public void onLoved(boolean success) {
-			if (mUserListener != null)
-				mUserListener.onLoved(success);
+		public void onBuffer(int percent) {
+			if (mCurrentStatus instanceof LoggingInStatus){
+				mCurrentStatus = new ConnectingStatus();
+			}
 		}
 
 		@Override
-		public void onShared(boolean success) {
+		public void onLoved(boolean success, String message) {
 			if (mUserListener != null)
-				mUserListener.onShared(success);
-		}		
+				mUserListener.onLoved(success, message);
+		}
+
+		@Override
+		public void onShared(boolean success, String message) {
+			if (mUserListener != null)
+				mUserListener.onShared(success, message);
+		}
 	}
 
 	public interface Status {
@@ -142,7 +159,7 @@ public class PlayerService extends Service {
 	public class PlayingStatus implements Status {
 		int position;
 		XSPFTrackInfo trackInfo;
-		
+
 		public PlayingStatus(int currentPosition, XSPFTrackInfo currentTrack) {
 			this.position = currentPosition;
 			this.trackInfo = currentTrack;
@@ -177,6 +194,12 @@ public class PlayerService extends Service {
 		}
 	}
 
+	public class LoggingInStatus implements Status {
+		public String toString() {
+			return "connecting..";
+		}
+	}
+
 	public class ErrorStatus implements Status {
 		String mMessage = "";
 
@@ -205,11 +228,12 @@ public class PlayerService extends Service {
 			if (mPlayerThread.getError() != null)
 				mCurrentStatus = new ErrorStatus(mPlayerThread.getError()
 						.toString());
-			else
-			{
+			else {
 				Status curStatus = mCurrentStatus;
 				if (curStatus instanceof PlayingStatus)
-					((PlayingStatus)curStatus).setCurrentPosition(mPlayerThread.getCurrentPosition());
+					((PlayingStatus) curStatus)
+							.setCurrentPosition(mPlayerThread
+									.getCurrentPosition());
 			}
 		return mCurrentStatus;
 	}
@@ -230,22 +254,21 @@ public class PlayerService extends Service {
 		mPlayerThread = null;
 		mCurrentStatus = new StoppedStatus();
 		return true;
-	}	
-	
+	}
+
 	@Override
 	public void onStart(Intent intent, int startId) {
 		super.onStart(intent, startId);
 		handleIntent(intent);
 	}
-	
+
 	void handleIntent(Intent intent) {
 		if (intent.getAction() == null)
 			return;
-		if (intent.getAction().equals(Intent.ACTION_VIEW))
-		{			
+		if (intent.getAction().equals(Intent.ACTION_VIEW)) {
 			startPlaying(intent.getDataString());
 		} else
-			Log.e(TAG, "Invalid service intent action: " + intent.getAction());		
+			Log.e(TAG, "Invalid service intent action: " + intent.getAction());
 	}
 
 	public boolean startPlaying(String url) {
@@ -257,85 +280,62 @@ public class PlayerService extends Service {
 					LastFMPlayer.PREFS_NAME, 0);
 			String username = settings.getString("username", null);
 			String password = settings.getString("password", null);
-			Utils.OptionsParser opts = handshake(username, password);
-			String session = opts.get("session");
-			String baseHost = opts.get("base_url");
-			String basePath = opts.get("base_path");
-			if (session == null || session.equals("FAILED") || baseHost == null
-					|| basePath == null) {
-				String message = opts.get("msg");
-				if (message == null)
-					message = "";
-				setCurrentStatus(new ErrorStatus("Auth failed: " + message));
-				return false;
-			}
-			
-			mPlayerThread = new PlayerThread(username, password, session, baseHost + basePath);
-			mPlayerThread.setLastFMNotificationListener(new ServiceNotificationListener(mLastFMNotificationListener));
-			mPlayerThread.start();				
-				mPlayerThread.mInitLock.block();
-				Message m = Message.obtain(mPlayerThread.mHandler,
-						PlayerThread.MESSAGE_ADJUST, url);
-				m.sendToTarget();
 
-				Message.obtain(mPlayerThread.mHandler,
-						PlayerThread.MESSAGE_CACHE_FRIENDS_LIST).sendToTarget();
-				updateNotification("Starting playback");
-				mCurrentStatus = new ConnectingStatus();
-				return true;			
+			mPlayerThread = new PlayerThread(username, password);
+			mPlayerThread
+					.setLastFMNotificationListener(new ServiceNotificationListener(
+							mLastFMNotificationListener));
+			mPlayerThread.start();
+			mPlayerThread.mInitLock.block();
+			Message m = Message.obtain(mPlayerThread.mHandler,
+					PlayerThread.MESSAGE_ADJUST, url);
+			m.sendToTarget();
+
+			Message.obtain(mPlayerThread.mHandler,
+					PlayerThread.MESSAGE_CACHE_FRIENDS_LIST).sendToTarget();
+			updateNotification("Starting playback");
+			mCurrentStatus = new LoggingInStatus();
+			return true;
 		} catch (Exception e) {
 			e.printStackTrace();
 			setCurrentStatus(new ErrorStatus("Auth failed: " + e.toString()));
 			return false;
-		} 
-	}
-
-	Utils.OptionsParser handshake(String Username, String Pass) throws IOException {
-			String passMD5 = Utils.md5String(Pass);
-			URL url = new URL(
-					HOST
-							+ "/radio/handshake.php?version=1.0.0.0&platform=windows&username="
-							+ Username + "&passwordmd5=" + passMD5);
-			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-			conn.connect();
-			InputStream is = conn.getInputStream();
-			InputStreamReader reader = new InputStreamReader(is);
-			BufferedReader stringReader = new BufferedReader(reader);
-			Utils.OptionsParser options = new Utils.OptionsParser(stringReader);
-			if (!options.parse())
-				options = null;
-			stringReader.close();
-			return options;
+		}
 	}
 
 	public boolean skipCurrentTrack() {
 		if (mPlayerThread != null) {
-			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_SKIP).sendToTarget();
+			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_SKIP)
+					.sendToTarget();
 			return true;
 		} else
 			return false;
 	}
-	
+
 	public boolean loveCurrentTrack() {
 		if (mPlayerThread != null) {
-			mCurrentTrackLoved = true;			
-			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_LOVE).sendToTarget();
+			mCurrentTrackLoved = true;
+			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_LOVE)
+					.sendToTarget();
 			return true;
 		} else
 			return false;
 	}
-	
+
 	public final ArrayList<FriendInfo> getFriendsList() {
 		if (mPlayerThread != null)
 			return mPlayerThread.getFriendsList();
-		else 
+		else
 			return null;
-	}	
+	}
 
-	public boolean shareTrack(XSPFTrackInfo track, String recipient, String message) {
+	public boolean shareTrack(XSPFTrackInfo track, String recipient,
+			String message) {
 		if (mPlayerThread != null) {
-			PlayerThread.TrackShareParams msgParams = new PlayerThread.TrackShareParams(track, recipient, message, "en");
-			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_SHARE, msgParams).sendToTarget();
+			PlayerThread.TrackShareParams msgParams = new PlayerThread.TrackShareParams(
+					track, recipient, message, "en");
+			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_SHARE,
+					msgParams).sendToTarget();
 			return true;
 		} else
 			return false;
@@ -344,7 +344,8 @@ public class PlayerService extends Service {
 	public boolean banCurrentTrack() {
 		if (mPlayerThread != null) {
 			mCurrentTrackBanned = true;
-			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_BAN).sendToTarget();
+			Message.obtain(mPlayerThread.mHandler, PlayerThread.MESSAGE_BAN)
+					.sendToTarget();
 			return true;
 		} else
 			return false;

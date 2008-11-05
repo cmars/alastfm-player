@@ -109,7 +109,7 @@ public class Utils {
 		return res;
 	}
 
-	static Pattern pattern = Pattern.compile("^([\\w\\:]+)(\\[\\d+\\])?$");
+	static Pattern pattern = Pattern.compile("^([\\w\\:]+)(\\[(\\d+)\\])?$");
 	static public String getChildElement(final Element element,
 			final String[] path) throws ParseException {
 		Element curElement = element;
@@ -121,8 +121,8 @@ public class Utils {
 				throw new IllegalArgumentException("Incorrect path syntax element: \"" + pathElem + "\"");
 			
 			int nIdx = 0; 
-			if (m.groupCount() > 1)
-				nIdx = Integer.parseInt(m.group(2));
+			if (m.group(2) != null)
+				nIdx = Integer.parseInt(m.group(3));
 
 			NodeList nodes = curElement.getChildNodes();
 

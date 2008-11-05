@@ -68,6 +68,7 @@ public final class R {
         public static final int local_service_disconnected=0x7f050003;
         public static final int menu_about=0x7f05000c;
         public static final int menu_settings=0x7f05000a;
+        public static final int message=0x7f050015;
         public static final int ok_button=0x7f050007;
         public static final int password=0x7f050010;
         public static final int settings_button=0x7f050009;
@@ -79,5 +80,6 @@ public final class R {
         public static final int track_shared=0x7f050014;
         public static final int user_info_title=0x7f050006;
         public static final int username=0x7f05000f;
+        public static final int with=0x7f050016;
     }
 }
