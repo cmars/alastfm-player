@@ -131,7 +131,6 @@ public class LastFMPlayer extends Activity {
 		@Override
 		public void onLoved(boolean success) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
-				@Override
 				public void run() {
 					Toast.makeText(LastFMPlayer.this,
 							R.string.track_loved, Toast.LENGTH_SHORT)
@@ -143,7 +142,6 @@ public class LastFMPlayer extends Activity {
 		@Override
 		public void onShared(boolean success) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
-				@Override
 				public void run() {
 					Toast.makeText(LastFMPlayer.this,
 							R.string.track_shared, Toast.LENGTH_SHORT)
@@ -155,7 +153,6 @@ public class LastFMPlayer extends Activity {
 		@Override
 		public void onBanned(boolean success) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
-				@Override
 				public void run() {
 					Toast.makeText(LastFMPlayer.this,
 							R.string.track_banned, Toast.LENGTH_SHORT)
@@ -201,7 +198,7 @@ public class LastFMPlayer extends Activity {
 				if (status != null) {
 					final String statusString = status.toString();
 					LastFMPlayer.this.runOnUiThread(new Runnable() {
-						@Override
+
 						public void run() {
 							if (mBoundService == null)
 								return;
@@ -420,7 +417,7 @@ public class LastFMPlayer extends Activity {
 		ImageSwitcher albumView = (ImageSwitcher) LastFMPlayer.this
 				.findViewById(R.id.album_view);
 		albumView.setFactory(new ViewSwitcher.ViewFactory() {
-			@Override
+
 			public View makeView() {
 				ImageView i = new ImageView(LastFMPlayer.this);
 				i.setBackgroundColor(0xFF000000);

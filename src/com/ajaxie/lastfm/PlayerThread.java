@@ -38,6 +38,7 @@ import android.util.Log;
 
 import com.ajaxie.lastfm.PlayerService.LastFMNotificationListener;
 import com.ajaxie.lastfm.Utils.OptionsParser;
+import com.ajaxie.lastfm.Utils.ParseException;
 
 public class PlayerThread extends Thread {
 
@@ -82,6 +83,22 @@ public class PlayerThread extends Thread {
 
 		public NotEnoughContentError() {
 			super("Not enough content for this station");
+		}
+	}
+	
+	public static class LastFMXmlRpcError extends LastFMError {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+		String faultString = "";
+		
+		public LastFMXmlRpcError(String faultString) {
+			super("XmlRPC error: " + faultString);
+		}
+		
+		public String getFaultString() {
+			return faultString;
 		}
 	}
 	
@@ -242,7 +259,7 @@ public class PlayerThread extends Thread {
 	}
 
 	MediaPlayer.OnCompletionListener mOnTrackCompletionListener = new MediaPlayer.OnCompletionListener() {
-		@Override
+
 		public void onCompletion(MediaPlayer mp) {
 			try {
 				playNextTrack();
@@ -253,7 +270,7 @@ public class PlayerThread extends Thread {
 	};
 
 	OnBufferingUpdateListener mOnBufferingUpdateListener = new MediaPlayer.OnBufferingUpdateListener() {
-		@Override
+
 		public void onBufferingUpdate(MediaPlayer mp, int percent) {
 			if (mLastFMNotificationListener != null)
 				mLastFMNotificationListener.onBuffer(percent);
@@ -492,12 +509,19 @@ public class PlayerThread extends Thread {
 			DocumentBuilderFactory dbFac = DocumentBuilderFactory.newInstance();
 			DocumentBuilder db = dbFac.newDocumentBuilder();
 			Document doc = db.parse(is);
+			
+			try { 
 			String res = Utils.getChildElement(doc.getDocumentElement(),
-					"string");
+					new String[] {"params", "param", "value", "string"});
 			if (!res.equals("OK"))
 			{
 				Log.e(TAG, "while xmlrpc got " + res);
-				throw new LastFMError("XMLRPC Call failed: " + res);
+				throw new LastFMXmlRpcError("XMLRPC Call failed: " + res);
+			}
+			} catch (ParseException e) {
+				String faultString = Utils.getChildElement(doc.getDocumentElement(),
+						new String[] {"params", "param", "value", "struct", "member[1]", "value", "string"});				
+				throw new LastFMXmlRpcError(faultString);
 			}
 		} catch (Exception e) {
 			Log.e(TAG, "while xmlrpc", e);
