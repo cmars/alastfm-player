@@ -267,7 +267,7 @@ public class PlayerThread extends Thread {
 							} else
 								throw new LastFMError("Playlist fetch failed");
 						} else
-							throw new LastFMError("Adjust call failed");
+							throw new LastFMError("Failed to tune to a station. Please try again or choose a different station.");
 						break;
 					}
 				} catch (LastFMError e) {
@@ -366,10 +366,10 @@ public class PlayerThread extends Thread {
 	private void submitCurrentTrackDelayed() {
 		XSPFTrackInfo curTrack = getCurrentTrack();
 		if (curTrack.getDuration() > 30)
-			if (mp.getCurrentPosition() > 240
-					|| mp.getCurrentPosition() > curTrack.getDuration()
-					|| mCurrentTrackRating.equals("L")
-					|| mCurrentTrackRating.equals("B")) {
+			if (mp != null && mp.getCurrentPosition() > 240
+					|| mp.getCurrentPosition() > curTrack.getDuration()					
+					|| (mCurrentTrackRating != null && mCurrentTrackRating.equals("L"))
+					|| (mCurrentTrackRating != null && mCurrentTrackRating.equals("B"))) {
 				TrackSubmissionParams params = new TrackSubmissionParams(
 						curTrack, mStartPlaybackTime, mCurrentTrackRating);
 				Message.obtain(mHandler, PlayerThread.MESSAGE_SUBMIT_TRACK,
@@ -391,13 +391,18 @@ public class PlayerThread extends Thread {
 		String streamUrl = mCurrentTrack.getLocation();
 		try {
 			if (mp != null)
+			{
 				mp.stop();
-			mp = new MediaPlayer();
-			mp.setDataSource(streamUrl);
-			mp.setOnCompletionListener(mOnTrackCompletionListener);
-			mp.setOnBufferingUpdateListener(mOnBufferingUpdateListener);
-			mp.prepare();
-			mp.start();
+				mp = null;
+			}
+			
+			MediaPlayer mediaPlayer = new MediaPlayer();
+			mediaPlayer.setDataSource(streamUrl);
+			mediaPlayer.setOnCompletionListener(mOnTrackCompletionListener);
+			mediaPlayer.setOnBufferingUpdateListener(mOnBufferingUpdateListener);
+			mediaPlayer.prepare();
+			mediaPlayer.start();
+			mp = mediaPlayer;
 			mStartPlaybackTime = System.currentTimeMillis() / 1000;
 			mCurrentTrackRating = "";
 			Message.obtain(mHandler, PlayerThread.MESSAGE_CACHE_TRACK_INFO)
@@ -555,7 +560,7 @@ public class PlayerThread extends Thread {
 	boolean checkIfUserExists(String username) 
 		throws IOException {
 		try {
-			URL url = new URL(WS_URL + "user/" + URLEncoder.encode(username, "UTF-8") + "/profile.xml");
+			URL url = new URL(WS_URL + "/user/" + URLEncoder.encode(username, "UTF-8") + "/profile.xml");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.connect();
 			
@@ -581,7 +586,7 @@ public class PlayerThread extends Thread {
 					message = "";
 				if (message.equals("no such user"))
 				{
-					if (checkIfUserExists(username))
+					if (!checkIfUserExists(username))
 						setErrorState(new BadCredentialsError(message, BadCredentialsError.BAD_USERNAME));
 					else
 						setErrorState(new BadCredentialsError(message, BadCredentialsError.BAD_PASSWORD));
@@ -608,7 +613,7 @@ public class PlayerThread extends Thread {
 		URL url = new URL(
 				HOST
 						+ "/radio/handshake.php?version=1.0.0.0&platform=windows&username="
-						+ Username + "&passwordmd5=" + passMD5);
+						+ URLEncoder.encode(Username, "UTF_8") + "&passwordmd5=" + passMD5);
 		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 		conn.connect();
 		InputStream is = conn.getInputStream();

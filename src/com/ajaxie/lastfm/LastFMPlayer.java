@@ -63,8 +63,10 @@ public class LastFMPlayer extends Activity {
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		boolean result = super.onCreateOptionsMenu(menu);
-		menu.add(0, MENU_SETTINGS_ID, 0, R.string.menu_settings).setIcon(android.R.drawable.ic_menu_preferences);		
-		menu.add(0, MENU_ABOUT_ID, 0, R.string.menu_about).setIcon(android.R.drawable.ic_menu_help);
+		menu.add(0, MENU_SETTINGS_ID, 0, R.string.menu_settings).setIcon(
+				android.R.drawable.ic_menu_preferences);
+		menu.add(0, MENU_ABOUT_ID, 0, R.string.menu_about).setIcon(
+				android.R.drawable.ic_menu_help);
 		return result;
 	}
 
@@ -134,27 +136,27 @@ public class LastFMPlayer extends Activity {
 	class LastFMNotificationListener extends
 			PlayerService.LastFMNotificationListener {
 
-		@Override 
+		@Override
 		public void onStartTrack(XSPFTrackInfo trackInfo) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
 				public void run() {
 					final ImageButton skipButton = (ImageButton) findViewById(R.id.skip_button);
-					skipButton.setEnabled(true);					
-				}});
+					skipButton.setEnabled(true);
+				}
+			});
 		}
-		
+
 		@Override
 		public void onLoved(final boolean success, final String message) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
 				public void run() {
 					if (success)
-					Toast.makeText(LastFMPlayer.this,
-							R.string.track_loved, Toast.LENGTH_SHORT)
-							.show();
+						Toast.makeText(LastFMPlayer.this, R.string.track_loved,
+								Toast.LENGTH_SHORT).show();
 					else
-						Toast.makeText(LastFMPlayer.this,								
+						Toast.makeText(LastFMPlayer.this,
 								"Love failed: " + message, Toast.LENGTH_LONG)
-								.show();						
+								.show();
 				}
 			});
 		}
@@ -164,19 +166,19 @@ public class LastFMPlayer extends Activity {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
 				public void run() {
 					if (success)
-					Toast.makeText(LastFMPlayer.this,
-							R.string.track_shared, Toast.LENGTH_SHORT)
-							.show();
+						Toast.makeText(LastFMPlayer.this,
+								R.string.track_shared, Toast.LENGTH_SHORT)
+								.show();
 					else
-						Toast.makeText(LastFMPlayer.this,								
+						Toast.makeText(LastFMPlayer.this,
 								"Share failed: " + message, Toast.LENGTH_LONG)
-								.show();						
+								.show();
 				}
 			});
 		}
 
 		@Override
-		public void onBanned(final boolean success, final String message) {			
+		public void onBanned(final boolean success, final String message) {
 			LastFMPlayer.this.runOnUiThread(new Runnable() {
 				public void run() {
 					if (success)
@@ -184,13 +186,13 @@ public class LastFMPlayer extends Activity {
 								R.string.track_banned, Toast.LENGTH_SHORT)
 								.show();
 					else
-						Toast.makeText(LastFMPlayer.this,								
+						Toast.makeText(LastFMPlayer.this,
 								"Ban failed: " + message, Toast.LENGTH_SHORT)
-								.show();						
+								.show();
 				}
 			});
 		}
-		
+
 	}
 
 	void resetSongInfoDisplay() {
@@ -202,14 +204,17 @@ public class LastFMPlayer extends Activity {
 				.findViewById(R.id.album_name_text);
 		TextView trackText = (TextView) LastFMPlayer.this
 				.findViewById(R.id.track_name_text);
-//		ImageSwitcher albumView = (ImageSwitcher) LastFMPlayer.this
-//				.findViewById(R.id.album_view);
 
 		timeText.setText("--:--");
 		creatorText.setText("");
 		albumText.setText("");
 		trackText.setText("");
-//		albumView.setImageDrawable(null);
+	}
+
+	void resetAlbumImage() {
+		ImageSwitcher albumView = (ImageSwitcher) LastFMPlayer.this
+				.findViewById(R.id.album_view);
+		albumView.setImageDrawable(null);
 	}
 
 	class StatusRefreshTask extends TimerTask {
@@ -218,7 +223,7 @@ public class LastFMPlayer extends Activity {
 
 		@Override
 		public void run() {
-			 
+
 			if (mBoundService != null) {
 				final PlayerService.Status status = mBoundService
 						.getCurrentStatus();
@@ -244,32 +249,51 @@ public class LastFMPlayer extends Activity {
 									.findViewById(R.id.track_name_text);
 							ImageSwitcher albumView = (ImageSwitcher) LastFMPlayer.this
 									.findViewById(R.id.album_view);
-							
-							TextView radioName = (TextView) LastFMPlayer.this
-									 .findViewById(R.id.radio_name);
 
-							if (status instanceof PlayerService.ConnectingStatus ||
-									status instanceof PlayerService.LoggingInStatus)
-								showLoadingBanner();
+							TextView radioName = (TextView) LastFMPlayer.this
+									.findViewById(R.id.radio_name);
+
+							if (status instanceof PlayerService.ConnectingStatus
+									|| status instanceof PlayerService.LoggingInStatus)
+							{
+								SharedPreferences settings = getSharedPreferences(
+										PREFS_NAME, 0);
+								String username = settings.getString("username", null);
+
+								Uri stationUri = getStationUri(settings);
+								if (stationUri == null && username != null)
+									stationUri = genDefaultUri(username);
+								if (stationUri != null)
+									radioName.setText(Utils.getUriDescription(stationUri));
+								showLoadingBanner("Connecting..");
+							}
 							else
 								hideLoadingBanner();
 
 							if (status instanceof PlayerService.ErrorStatus) {
-								PlayerService.ErrorStatus err = (PlayerService.ErrorStatus)status;
+								PlayerService.ErrorStatus err = (PlayerService.ErrorStatus) status;
 								statusText.setText("Error");
-								errorText.setText(statusString);
 								errorText.setVisibility(View.VISIBLE);
-								if (err.getError() instanceof PlayerThread.BadCredentialsError)
-								{
-									SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-									SharedPreferences.Editor ed = settings.edit();
-									
-									if (((PlayerThread.BadCredentialsError)err.getError()).getBadItem() == PlayerThread.BadCredentialsError.BAD_USERNAME)
+								if (err.getError() instanceof PlayerThread.BadCredentialsError) {
+									SharedPreferences settings = getSharedPreferences(
+											PREFS_NAME, 0);
+									SharedPreferences.Editor ed = settings
+											.edit();
+
+									if (((PlayerThread.BadCredentialsError) err
+											.getError()).getBadItem() == PlayerThread.BadCredentialsError.BAD_USERNAME)
+									{
+										errorText.setText("Login failed: invalid username");
 										ed.putBoolean("username_invalid", true);
+									}
 									else
-										ed.putBoolean("password_invalid", true);									
+									{
+										errorText.setText("Login failed: invalid password");
+										ed.putBoolean("password_invalid", true);
+									}
 									ed.commit();
-								}
+								} else 
+									errorText.setText(statusString);
 							} else {
 								final ImageButton loveButton = (ImageButton) findViewById(R.id.love_button);
 								final ImageButton banButton = (ImageButton) findViewById(R.id.ban_button);
@@ -285,7 +309,7 @@ public class LastFMPlayer extends Activity {
 								errorText.setVisibility(View.INVISIBLE);
 							}
 
-							if (status instanceof PlayerService.PlayingStatus) {								
+							if (status instanceof PlayerService.PlayingStatus) {
 								int pos = ((PlayerService.PlayingStatus) status)
 										.getCurrentPosition();
 								final XSPFTrackInfo track = ((PlayerService.PlayingStatus) status)
@@ -308,8 +332,10 @@ public class LastFMPlayer extends Activity {
 									trackText.setText(track.getTitle());
 									radioName.setText(track.getStationName());
 								}
-							} else
+							} else {
 								resetSongInfoDisplay();
+								resetAlbumImage();
+							}
 						}
 					});
 				}
@@ -326,27 +352,35 @@ public class LastFMPlayer extends Activity {
 
 	Timer refreshTimer;
 
-	void showLoadingBanner() {
-		 final ImageView img = (ImageView)findViewById(R.id.loading_image);
-		 ViewSwitcher switcher = (ViewSwitcher)findViewById(R.id.switcher);
-		 if (switcher.getCurrentView().getId() != R.id.loading_container)
-		 {
-			 switcher.showNext();
-			 AnimationDrawable frameAnimation = (AnimationDrawable)img.getBackground();
-			 frameAnimation.start();
-		 }		
+	void showLoadingBanner(String text) {
+		final TextView textView = (TextView) findViewById(R.id.loading_text);
+		ViewSwitcher switcher = (ViewSwitcher) findViewById(R.id.switcher);
+		
+		if (!text.equals(textView.getText().toString()))
+		{
+			textView.setText(text);
+			textView.invalidate();
+		}
+		final ImageView img = (ImageView) findViewById(R.id.loading_image);
+		if (switcher.getCurrentView().getId() != R.id.loading_container) {
+			switcher.showNext();
+			AnimationDrawable frameAnimation = (AnimationDrawable) img
+					.getBackground();
+			frameAnimation.start();
+		}
 	}
-	
+
 	void hideLoadingBanner() {
-		 final ImageView img = (ImageView)findViewById(R.id.loading_image);
-		 ViewSwitcher switcher = (ViewSwitcher)findViewById(R.id.switcher);
-		 if (switcher.getCurrentView().getId() == R.id.loading_container)
-		 {
-			 switcher.showNext();
-			 AnimationDrawable frameAnimation = (AnimationDrawable)img.getBackground();
-			 frameAnimation.stop();
-		 }				
+		final ImageView img = (ImageView) findViewById(R.id.loading_image);
+		ViewSwitcher switcher = (ViewSwitcher) findViewById(R.id.switcher);
+		if (switcher.getCurrentView().getId() == R.id.loading_container) {
+			switcher.showNext();
+			AnimationDrawable frameAnimation = (AnimationDrawable) img
+					.getBackground();
+			frameAnimation.stop();
+		}
 	}
+
 	/** Called when the activity is first created. */
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
@@ -367,18 +401,18 @@ public class LastFMPlayer extends Activity {
 		}
 
 		// Load the ImageView that will host the animation and
-		 // set its background to our AnimationDrawable XML resource.
-		 final ImageView img = (ImageView)findViewById(R.id.loading_image);
-		 img.setBackgroundResource(R.drawable.loading_animation);
-		 
+		// set its background to our AnimationDrawable XML resource.
+		final ImageView img = (ImageView) findViewById(R.id.loading_image);
+		img.setBackgroundResource(R.drawable.loading_animation);
+
 		bindToPlayerService();
 
 		final Button tuneButton = (Button) findViewById(R.id.tune_button);
-		
+
 		tuneButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-				
+
 				String username = settings.getString("username", null);
 				String password = settings.getString("password", null);
 				if ((username == null || password == null)
@@ -386,28 +420,28 @@ public class LastFMPlayer extends Activity {
 					startActivityForResult(new Intent(LastFMPlayer.this,
 							UserInfo.class), SET_USER_INFO_AND_TUNE);
 				else
-					startActivityForResult(new Intent(LastFMPlayer.this, Tune.class), TUNE);
-			}			
+					startActivityForResult(new Intent(LastFMPlayer.this,
+							Tune.class), TUNE);
+			}
 		});
 
 		final ImageButton playButton = (ImageButton) findViewById(R.id.play_button);
 		final View.OnClickListener onPlayClickListener = new View.OnClickListener() {
 			public void onClick(View v) {
-				if (mBoundService != null &&
-						(mBoundService.getCurrentStatus() != null) 
-						&&
-						!(mBoundService.getCurrentStatus() instanceof PlayerService.StoppedStatus)
-						&&
-						!(mBoundService.getCurrentStatus() instanceof PlayerService.ErrorStatus))
+				if (mBoundService != null
+						&& (mBoundService.getCurrentStatus() != null)
+						&& !(mBoundService.getCurrentStatus() instanceof PlayerService.StoppedStatus)
+						&& !(mBoundService.getCurrentStatus() instanceof PlayerService.ErrorStatus))
 					return;
-				
-				 
+
 				SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 				String username = settings.getString("username", null);
 				String password = settings.getString("password", null);
-				boolean usernameInvalid = settings.getBoolean("username_invalid", false);
-				boolean passwordInvalid = settings.getBoolean("password_invalid", false);
-				
+				boolean usernameInvalid = settings.getBoolean(
+						"username_invalid", false);
+				boolean passwordInvalid = settings.getBoolean(
+						"password_invalid", false);
+
 				if ((usernameInvalid || passwordInvalid || username == null || password == null)
 						|| (username.length() == 0 || password.length() == 0))
 					startActivityForResult(new Intent(LastFMPlayer.this,
@@ -417,7 +451,11 @@ public class LastFMPlayer extends Activity {
 					if (stationUri == null)
 						stationUri = genDefaultUri(username);
 
-					showLoadingBanner();
+					TextView radioName = (TextView) LastFMPlayer.this
+						.findViewById(R.id.radio_name);
+					radioName.setText(Utils.getUriDescription(stationUri));
+
+					showLoadingBanner("Connecting..");
 					Intent serviceIntent = new Intent();
 					serviceIntent.setAction(Intent.ACTION_VIEW);
 					serviceIntent.setClass(LastFMPlayer.this,
@@ -447,11 +485,12 @@ public class LastFMPlayer extends Activity {
 			}
 		};
 		playButton.setOnClickListener(onPlayClickListener);
-		
+
 		final ImageButton stopButton = (ImageButton) findViewById(R.id.stop_button);
 		stopButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				if (mBoundService != null) {
+					showLoadingBanner("Stopping..");
 					mBoundService.stopPlaying();
 					// LastFMPlayer.this.unbindService(mConnection);
 					mBoundService = null;
@@ -459,8 +498,10 @@ public class LastFMPlayer extends Activity {
 							PlayerService.class);
 					LastFMPlayer.this.stopService(serviceIntent);
 					resetSongInfoDisplay();
+					resetAlbumImage();
+					hideLoadingBanner();
 					TextView statusText = (TextView) LastFMPlayer.this
-							.findViewById(R.id.status_text);					
+							.findViewById(R.id.status_text);
 					statusText.setText("Disconnected");
 				}
 			}
@@ -471,16 +512,13 @@ public class LastFMPlayer extends Activity {
 			public void onClick(View v) {
 				if (mBoundService == null)
 					return;
-					
-				if (
-					(mBoundService.getCurrentStatus() == null) 
-					||
-					!(mBoundService.getCurrentStatus() instanceof PlayerService.PlayingStatus)
-				    )
-				return;					
-				
-					skipButton.setEnabled(false);
-					mBoundService.skipCurrentTrack();
+
+				if ((mBoundService.getCurrentStatus() == null)
+						|| !(mBoundService.getCurrentStatus() instanceof PlayerService.PlayingStatus))
+					return;
+
+				skipButton.setEnabled(false);
+				mBoundService.skipCurrentTrack();
 			}
 		});
 
@@ -488,7 +526,7 @@ public class LastFMPlayer extends Activity {
 		banButton.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
 				if (mBoundService != null) {
-					if (mBoundService.getCurrentStatus() instanceof PlayerService.PlayingStatus)					
+					if (mBoundService.getCurrentStatus() instanceof PlayerService.PlayingStatus)
 						if (mBoundService.banCurrentTrack())
 							banButton.setEnabled(false);
 				}
@@ -564,7 +602,7 @@ public class LastFMPlayer extends Activity {
 		else
 			return Uri.parse(uriString);
 	}
-	
+
 	public static Uri genDefaultUri(String username) {
 		Uri.Builder builder = new Uri.Builder();
 		builder.scheme("lastfm");
@@ -578,55 +616,56 @@ public class LastFMPlayer extends Activity {
 
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == SET_USER_INFO_AND_PLAY && resultCode == RESULT_OK) {
-				SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
-				String username = settings.getString("username", null);
-				String password = settings.getString("password", null);
-				if (username != null && password != null
-						&& username.length() != 0 && password.length() != 0) {
+			SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
+			String username = settings.getString("username", null);
+			String password = settings.getString("password", null);
+			if (username != null && password != null && username.length() != 0
+					&& password.length() != 0) {
 
-					Uri stationUri = getStationUri(settings);
-					if (stationUri == null)
-						stationUri = genDefaultUri(username);
+				Uri stationUri = getStationUri(settings);
+				if (stationUri == null)
+					stationUri = genDefaultUri(username);
 
-					TextView radioName = (TextView) LastFMPlayer.this
-						.findViewById(R.id.radio_name);				
-					radioName.setText(Utils.getUriDescription(stationUri));
-					
-					Intent serviceIntent = new Intent(Intent.ACTION_VIEW, stationUri,
-							LastFMPlayer.this, PlayerService.class);
-					LastFMPlayer.this.startService(serviceIntent);
-				}
-			}		
+				TextView radioName = (TextView) LastFMPlayer.this
+						.findViewById(R.id.radio_name);
+				radioName.setText(Utils.getUriDescription(stationUri));
+				showLoadingBanner("Connecting..");
+
+				Intent serviceIntent = new Intent(Intent.ACTION_VIEW,
+						stationUri, LastFMPlayer.this, PlayerService.class);
+				LastFMPlayer.this.startService(serviceIntent);
+			}
+		}
 		if (requestCode == SET_USER_INFO_AND_TUNE && resultCode == RESULT_OK) {
 			SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 			String username = settings.getString("username", null);
 			String password = settings.getString("password", null);
-			if (username != null && password != null
-					&& username.length() != 0 && password.length() != 0) 
-				startActivityForResult(new Intent(LastFMPlayer.this,
-						Tune.class), TUNE);		
+			if (username != null && password != null && username.length() != 0
+					&& password.length() != 0)
+				startActivityForResult(
+						new Intent(LastFMPlayer.this, Tune.class), TUNE);
 		}
 		if (requestCode == TUNE && resultCode == RESULT_OK) {
 			SharedPreferences settings = getSharedPreferences(PREFS_NAME, 0);
 			String username = settings.getString("username", null);
-			String password = settings.getString("password", null);			
-			
-			if (username != null && password != null
-					&& username.length() != 0 && password.length() != 0) {
+			String password = settings.getString("password", null);
 
+			if (username != null && password != null && username.length() != 0
+					&& password.length() != 0) {
 
-				
 				SharedPreferences.Editor ed = settings.edit();
 				ed.putString("station_uri", data.getDataString());
 				ed.commit();
-				
+
 				TextView radioName = (TextView) LastFMPlayer.this
-					.findViewById(R.id.radio_name);				
+						.findViewById(R.id.radio_name);
 				radioName.setText(Utils.getUriDescription(data.getData()));
 
-				Intent serviceIntent = new Intent(Intent.ACTION_VIEW, data.getData(),
-						LastFMPlayer.this, PlayerService.class);
-				
+				Intent serviceIntent = new Intent(Intent.ACTION_VIEW, data
+						.getData(), LastFMPlayer.this, PlayerService.class);
+
+				showLoadingBanner("Connecting..");
+
 				if (mBoundService == null) {
 					if (!LastFMPlayer.this.bindService(serviceIntent,
 							new LastFMServiceConnection(),
@@ -636,7 +675,7 @@ public class LastFMPlayer extends Activity {
 				} else {
 					LastFMPlayer.this.startService(serviceIntent);
 				}
-				
+
 			}
 		}
 	}

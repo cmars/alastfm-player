@@ -28,7 +28,9 @@ public class UserInfo extends Activity {
             	usernameText.setError("Last login attempt with this username failed");
 	        
 	        if (settings.getBoolean("password_invalid", false))
+	        {
             	passwordText.setError("Last login attempt with this password failed");
+	        }
 	        	        
 	        usernameText.setOnKeyListener(new OnKeyListener() {
 				@Override
@@ -60,7 +62,7 @@ public class UserInfo extends Activity {
 	            	ed.putString("password", passwordText.getText().toString());
 	            	ed.putBoolean("username_invalid", false);
 	            	ed.putBoolean("password_invalid", false);
-	            	ed.commit();
+	            	boolean res = ed.commit();	            	
 	                setResult(RESULT_OK);
 	                finish();
 	            }

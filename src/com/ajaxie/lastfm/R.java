@@ -44,6 +44,7 @@ public final class R {
         public static final int share=0x7f02001b;
         public static final int skip=0x7f02001c;
         public static final int stop=0x7f02001d;
+        public static final int tune_icon=0x7f02001e;
     }
     public static final class id {
         public static final int album_name_text=0x7f06000c;
@@ -55,8 +56,8 @@ public final class R {
         public static final int error_text=0x7f060018;
         public static final int label=0x7f060002;
         public static final int loading_container=0x7f06000f;
-        public static final int loading_image=0x7f060011;
-        public static final int loading_text=0x7f060010;
+        public static final int loading_image=0x7f060010;
+        public static final int loading_text=0x7f060011;
         public static final int love_button=0x7f060015;
         public static final int ok_button=0x7f060005;
         public static final int password=0x7f060020;

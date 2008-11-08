@@ -181,7 +181,7 @@ public class Tune extends ListActivity {
 	   private final static String[] STATION_TYPES = new String[] {
 		   		"Artist", "Tag", "My Recommendations",
 		        "My Radio Station",		        
-		        "My Neighbor Radio", "Playlist"} ;
+		        "My Neighbour Radio", "My Playlist"} ;
 	   
 	   private final int STATION_TYPE_ARTIST = 0;
 	   private final int STATION_TYPE_TAG = 1;
