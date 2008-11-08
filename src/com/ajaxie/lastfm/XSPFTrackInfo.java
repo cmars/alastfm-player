@@ -21,6 +21,12 @@ public class XSPFTrackInfo {
 	private int mDuration;
 	private String mImage;
 	private String mTitle;
+	private String mStationName;
+	
+	
+	public String getStationName() {
+		return mStationName;
+	}
 	
 	public String getTitle() {
 		return mTitle;
@@ -73,7 +79,8 @@ public class XSPFTrackInfo {
 	
 	private String mAuth;
 
-	public XSPFTrackInfo(Element element) throws Utils.ParseException{
+	public XSPFTrackInfo(String stationName, Element element) throws Utils.ParseException{
+			mStationName = stationName;
 			mLocation = Utils.getChildElement(element, "location");		
 			mAlbum = Utils.getChildElement(element, "album");		
 			mCreator = Utils.getChildElement(element, "creator");

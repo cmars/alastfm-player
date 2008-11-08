@@ -6,6 +6,7 @@
 <string name="local_service_disconnected">Local service disconnected</string>
 <string name="alert_dialog_single_choice">Error</string>
 <string name="alert_dialog_ok">OK</string>
+<string name="alert_dialog_cancel">Cancel</string>
 <string name="user_info_title">User Info</string>
 <string name="ok_button">OK</string>
 <string name="cancel_button">Cancel</string>
@@ -24,4 +25,8 @@
 <string name="track_shared">Track shared</string>
 <string name="message">Message</string>
 <string name="with">with</string>
+<string name="tune">Tune to a station</string>
+<string name="enter_station_title">Enter station name</string>
+<string name="enter_artist_name_title">Enter station name</string>
+<string name="enter_tag_title">Enter tag</string>
 </resources>

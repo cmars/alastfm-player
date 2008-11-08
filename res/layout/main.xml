@@ -2,31 +2,34 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
 	android:orientation="vertical" android:layout_width="fill_parent"
 	android:layout_height="fill_parent">
-	<TextView android:id="@+id/status_text" android:layout_height="wrap_content"
-		android:text="" android:layout_width="wrap_content" />
-	
 	
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:layout_gravity="left">
-    <Spinner android:id="@+id/station_spinner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:drawSelectorOnTop="true"
-        android:prompt="@string/station_spinner_prompt"
-    />		
-	<EditText android:id="@+id/station_name" android:layout_height="wrap_content"
-		android:text="Offspring" android:layout_width="fill_parent" android:layout_weight="1"
-		android:clickable="true" android:singleLine="true" />
+		android:layout_gravity="right">
+
+	<LinearLayout android:orientation="vertical"
+		android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_weight="1"
+		android:layout_gravity="right" >
+	<TextView android:id="@+id/status_text" android:layout_height="wrap_content"
+		android:text="playing" android:layout_width="fill_parent"  />		
+	<TextView android:id="@+id/radio_name" android:layout_height="fill_parent"
+		android:text="" android:layout_width="fill_parent" 
+		android:textSize="18sp"/>
 	</LinearLayout>
 	
+	 <Button android:id="@+id/tune_button" android:layout_width="85dip"
+	 android:text="Tune" android:layout_height="65dip"/>
+	 
+	</LinearLayout>
+	
+	<ViewSwitcher android:id="@+id/switcher" android:layout_width="fill_parent" android:layout_height="wrap_content">
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="wrap_content" android:layout_height="wrap_content"
 		android:layout_gravity="left">
 
 		<ImageSwitcher android:id="@+id/album_view" android:layout_width="100dip"
 			android:layout_height="100dip" android:paddingRight="8dip"/>
-			
+						
 		<LinearLayout android:orientation="vertical"
 			android:layout_width="wrap_content" android:layout_height="wrap_content"
 			android:layout_gravity="right">
@@ -41,6 +44,17 @@
 		</LinearLayout>
 
 	</LinearLayout>
+		<LinearLayout android:orientation="vertical" android:id="@+id/loading_container" 
+			android:layout_width="fill_parent" android:layout_height="wrap_content"
+			android:layout_gravity="center_horizontal">
+			<TextView android:id="@+id/loading_text" android:layout_height="wrap_content"
+				android:textSize="45dip" android:text="Connecting" android:layout_width="wrap_content" />
+
+			<ImageView android:id="@+id/loading_image" android:layout_width="48dip"
+			android:layout_height="48dip" android:paddingRight="8dip"/>
+	</LinearLayout>
+	
+	</ViewSwitcher>
 
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="wrap_content" android:layout_height="wrap_content"

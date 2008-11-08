@@ -1,6 +1,7 @@
 package com.ajaxie.lastfm;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -10,6 +11,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.concurrent.locks.Condition;
@@ -22,6 +24,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import org.xmlpull.v1.XmlPullParserException;
@@ -105,6 +108,27 @@ public class PlayerThread extends Thread {
 		}
 	}
 
+	public static class BadCredentialsError extends LastFMError {
+		String faultString = "";
+		public static int BAD_USERNAME = 0;
+		public static int BAD_PASSWORD = 1;
+		private int badItem;
+
+		public BadCredentialsError(String faultString, int badItem) {
+			super(faultString);
+			this.faultString = faultString;
+			this.badItem = badItem;
+		}
+
+		public String getFaultString() {
+			return faultString;
+		}
+
+		public int getBadItem() {
+			return badItem;
+		}
+	}
+
 	public LastFMError getError() {
 		return mError;
 	}
@@ -123,7 +147,7 @@ public class PlayerThread extends Thread {
 	public XSPFTrackInfo getCurrentTrack() {
 		return mCurrentTrack;
 	}
-
+	
 	private LastFMNotificationListener mLastFMNotificationListener = null;
 
 	public void setLastFMNotificationListener(
@@ -442,11 +466,26 @@ public class PlayerThread extends Thread {
 			DocumentBuilder db = dbFac.newDocumentBuilder();
 			Document doc = db.parse(is);
 
+			Element root = doc.getDocumentElement();
+			NodeList titleNs = root.getElementsByTagName("title");
+			String stationName = "<unknown station>"; 
+			if (titleNs.getLength() > 0)
+			{
+				Element titleElement = (Element)titleNs.item(0);
+				String res = "";
+				for (int i = 0; i < titleElement.getChildNodes().getLength(); i++)
+				{
+					Node item = titleElement.getChildNodes().item(i);
+					if (item.getNodeType() == Node.TEXT_NODE)
+						res += item.getNodeValue(); 
+				}
+				stationName = URLDecoder.decode(res, "UTF-8");
+			}
 			NodeList tracks = doc.getElementsByTagName("track");
 			ArrayList<XSPFTrackInfo> result = new ArrayList<XSPFTrackInfo>();
 			for (int i = 0; i < tracks.getLength(); i++)
 				try {
-					result.add(new XSPFTrackInfo((Element) tracks.item(i)));
+					result.add(new XSPFTrackInfo(stationName, (Element) tracks.item(i)));
 				} catch (Utils.ParseException e) {
 					Log.e(TAG, "in getPlaylist", e);
 					return null;
@@ -459,10 +498,10 @@ public class PlayerThread extends Thread {
 		}
 	}
 
+	
 	private boolean adjust(String stationUrl) throws LastFMError {
 		try {
-			URL url;
-			url = new URL("http://" + mBaseURL + "/adjust.php?session="
+			URL url = new URL("http://" + mBaseURL + "/adjust.php?session="
 					+ mSession + "&url="
 					+ URLEncoder.encode(stationUrl, "UTF-8"));
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -475,7 +514,9 @@ public class PlayerThread extends Thread {
 				options = null;
 			stringReader.close();
 			if ("OK".equals(options.get("response")))
+			{
 				return true;
+			}
 			else {
 				Log
 						.e(TAG, "Adjust failed: \"" + options.get("response")
@@ -511,6 +552,21 @@ public class PlayerThread extends Thread {
 
 	private static final String HOST = "http://ws.audioscrobbler.com";
 
+	boolean checkIfUserExists(String username) 
+		throws IOException {
+		try {
+			URL url = new URL(WS_URL + "user/" + URLEncoder.encode(username, "UTF-8") + "/profile.xml");
+			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+			conn.connect();
+			
+			InputStream is = conn.getInputStream();
+			is.close();
+			return true;
+		} catch (FileNotFoundException e) {
+			return false;
+		}
+	}
+	
 	boolean login(String username, String password) {
 		try {
 			Utils.OptionsParser opts;
@@ -523,7 +579,15 @@ public class PlayerThread extends Thread {
 				String message = opts.get("msg");
 				if (message == null)
 					message = "";
-				setErrorState(new LastFMError("Auth failed: " + message));
+				if (message.equals("no such user"))
+				{
+					if (checkIfUserExists(username))
+						setErrorState(new BadCredentialsError(message, BadCredentialsError.BAD_USERNAME));
+					else
+						setErrorState(new BadCredentialsError(message, BadCredentialsError.BAD_PASSWORD));
+				}
+				else
+					setErrorState(new LastFMError("Auth failed: " + message));
 				return false;
 			}
 			mSession = session;
@@ -533,7 +597,7 @@ public class PlayerThread extends Thread {
 			mScrobbler.handshake(username, password);			
 			return true;
 		} catch (IOException e) {
-			setErrorState(new LastFMError("Auth failed: " + e.toString()));
+			setErrorState(new LastFMError("Login failed: please check your internet connection"));
 			return false;
 		}
 	}

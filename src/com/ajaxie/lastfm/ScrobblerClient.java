@@ -158,7 +158,7 @@ public class ScrobblerClient {
         String res;
         	rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
 			res = rd.readLine();
-			if (res.equals("OK"))
+			if (res != null && res.equals("OK"))
 				return true;
 			else
 			{

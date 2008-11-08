@@ -4,5 +4,9 @@
     <string-array name="station_types">
         <item>Artist</item>
         <item>Tag</item>
+        <item>My Recommendations</item>
+        <item>My Radio Station</item>
+        <item>My Loved Tracks</item>
+        <item>My Neighbor Radio</item>
     </string-array>
 </resources>

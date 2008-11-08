@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -13,6 +14,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import android.net.Uri;
 import android.util.Log;
 
 public class Utils {
@@ -161,4 +163,47 @@ public class Utils {
 
 	}
 
+	static String capitalize(String text){
+		if (text.length() == 0)
+			return text;
+		
+		String l = text.substring(0, 1);
+		
+		return l.toUpperCase() + text.substring(1).toLowerCase(); 
+	}
+	
+	public static String getUriDescription(Uri uri) {
+		if (!uri.getScheme().equals("lastfm"))
+			return "<invalid uri>";
+		
+		List<String> path = uri.getPathSegments();
+		if (uri.getAuthority().equals("user")) {
+			if (path.size() < 2)
+				return "<invalid uri>";
+			
+			String username = path.get(0);
+			
+			if (path.get(1).equals("neighbours"))
+				return username + "'s Neighbourhood";
+			if (path.get(1).equals("personal"))
+				return username + "'s Library";
+			if (path.get(1).equals("playlist"))
+				return username + "'s Library";
+			if (path.get(1).equals("recommended"))
+				return username + "'s Recommendations";
+			return "<invalid uri>";			
+		} else
+			if (uri.getAuthority().equals("artist")) {
+				String artistName = capitalize(path.get(0));
+				return artistName + " Radio";
+			} else
+				if (uri.getAuthority().equals("group")) {
+					String groupName = capitalize(path.get(0));
+					return groupName + " Radio";					
+				} else if (uri.getAuthority().equals("globaltags")) {
+					String tagName = capitalize(path.get(0));
+					return tagName + " Radio";					
+				} else
+					return "<invalid uri>";
+	}
 }

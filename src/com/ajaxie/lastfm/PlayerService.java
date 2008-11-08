@@ -7,6 +7,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
 
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -14,6 +15,7 @@ import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Message;
@@ -58,6 +60,8 @@ public class PlayerService extends Service {
 	private NotificationManager mNM;
 
 	private LastFMNotificationListener mLastFMNotificationListener = null;
+	
+	private String mUrl;
 
 	public void setLastFMNotificationListener(
 			LastFMNotificationListener listener) {
@@ -164,7 +168,7 @@ public class PlayerService extends Service {
 			this.position = currentPosition;
 			this.trackInfo = currentTrack;
 		}
-
+		
 		public String toString() {
 			return "playing";
 		}
@@ -180,6 +184,7 @@ public class PlayerService extends Service {
 		public void setCurrentPosition(int currentPosition) {
 			position = currentPosition;
 		}
+		
 	}
 
 	public class StoppedStatus implements Status {
@@ -201,17 +206,21 @@ public class PlayerService extends Service {
 	}
 
 	public class ErrorStatus implements Status {
-		String mMessage = "";
+		LastFMError mErr = null;
 
-		public ErrorStatus(String message) {
-			mMessage = message;
+		public ErrorStatus(LastFMError err) {
+			mErr = err;
 		}
 
 		public String toString() {
-			if (mMessage == null)
+			if (mErr == null)
 				return "Unknown error";
 			else
-				return "Error: " + mMessage;
+				return mErr.toString();
+		}
+		
+		public LastFMError getError() {
+			return mErr;
 		}
 	}
 
@@ -226,8 +235,7 @@ public class PlayerService extends Service {
 	public Status getCurrentStatus() {
 		if (mPlayerThread != null)
 			if (mPlayerThread.getError() != null)
-				mCurrentStatus = new ErrorStatus(mPlayerThread.getError()
-						.toString());
+				mCurrentStatus = new ErrorStatus(mPlayerThread.getError());
 			else {
 				Status curStatus = mCurrentStatus;
 				if (curStatus instanceof PlayingStatus)
@@ -272,7 +280,6 @@ public class PlayerService extends Service {
 	}
 
 	public boolean startPlaying(String url) {
-		try {
 			if (mPlayerThread != null)
 				stopPlaying();
 
@@ -296,11 +303,6 @@ public class PlayerService extends Service {
 			updateNotification("Starting playback");
 			mCurrentStatus = new LoggingInStatus();
 			return true;
-		} catch (Exception e) {
-			e.printStackTrace();
-			setCurrentStatus(new ErrorStatus("Auth failed: " + e.toString()));
-			return false;
-		}
 	}
 
 	public boolean skipCurrentTrack() {

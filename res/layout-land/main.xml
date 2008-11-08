@@ -3,21 +3,23 @@
 	android:orientation="vertical" android:layout_width="fill_parent"
 	android:layout_height="fill_parent">
 	
-	<TextView android:id="@+id/status_text" android:layout_height="wrap_content"
-		android:text="" android:layout_width="wrap_content" />
-	
 	<LinearLayout android:orientation="horizontal"
 		android:layout_width="fill_parent" android:layout_height="wrap_content"
-		android:layout_gravity="left">
-    <Spinner android:id="@+id/station_spinner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:drawSelectorOnTop="true"
-        android:prompt="@string/station_spinner_prompt"
-    />		
-	<EditText android:id="@+id/station_name" android:layout_height="wrap_content"
-		android:text="Offspring" android:layout_width="fill_parent" android:layout_weight="1"
-		android:clickable="true" android:singleLine="true" />
+		android:layout_gravity="right">
+
+	<LinearLayout android:orientation="vertical"
+		android:layout_width="fill_parent" android:layout_height="wrap_content" android:layout_weight="1"
+		android:layout_gravity="right" >
+	<TextView android:id="@+id/status_text" android:layout_height="wrap_content"
+		android:text="playing" android:layout_width="fill_parent"  />		
+	<TextView android:id="@+id/radio_name" android:layout_height="fill_parent"
+		android:text="" android:layout_width="fill_parent" 
+		android:textSize="18sp"/>
+	</LinearLayout>
+	
+	 <Button android:id="@+id/tune_button" android:layout_width="85dip"
+	 android:text="Tune" android:layout_height="65dip"/>
+	 
 	</LinearLayout>
 
 	<LinearLayout android:orientation="horizontal"
