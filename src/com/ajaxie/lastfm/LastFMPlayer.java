@@ -221,6 +221,8 @@ public class LastFMPlayer extends Activity {
 
 		Bitmap prevBitmap;
 
+		PlayerService.Status prevStatus;
+		
 		@Override
 		public void run() {
 
@@ -275,23 +277,28 @@ public class LastFMPlayer extends Activity {
 								statusText.setText("Error");
 								errorText.setVisibility(View.VISIBLE);
 								if (err.getError() instanceof PlayerThread.BadCredentialsError) {
+									int badItem = ((PlayerThread.BadCredentialsError)err.getError()).getBadItem();
+									
+									if (badItem == PlayerThread.BadCredentialsError.BAD_USERNAME)
+										errorText.setText("Login failed: invalid username");
+									else
+										errorText.setText("Login failed: invalid password");
+
 									SharedPreferences settings = getSharedPreferences(
 											PREFS_NAME, 0);
-									SharedPreferences.Editor ed = settings
-											.edit();
-
-									if (((PlayerThread.BadCredentialsError) err
-											.getError()).getBadItem() == PlayerThread.BadCredentialsError.BAD_USERNAME)
+									
+									if (status.getClass() != prevStatus.getClass())
 									{
-										errorText.setText("Login failed: invalid username");
-										ed.putBoolean("username_invalid", true);
+										SharedPreferences.Editor ed = settings
+												.edit();
+	
+										if (badItem == PlayerThread.BadCredentialsError.BAD_USERNAME)
+											ed.putBoolean("username_invalid", true);
+										else
+											ed.putBoolean("password_invalid", true);
+										boolean res = ed.commit();
+										Log.w(TAG, Boolean.toString(res));
 									}
-									else
-									{
-										errorText.setText("Login failed: invalid password");
-										ed.putBoolean("password_invalid", true);
-									}
-									ed.commit();
 								} else 
 									errorText.setText(statusString);
 							} else {
@@ -336,6 +343,7 @@ public class LastFMPlayer extends Activity {
 								resetSongInfoDisplay();
 								resetAlbumImage();
 							}
+							prevStatus = status;
 						}
 					});
 				}
@@ -655,7 +663,7 @@ public class LastFMPlayer extends Activity {
 
 				SharedPreferences.Editor ed = settings.edit();
 				ed.putString("station_uri", data.getDataString());
-				ed.commit();
+				boolean res = ed.commit();
 
 				TextView radioName = (TextView) LastFMPlayer.this
 						.findViewById(R.id.radio_name);

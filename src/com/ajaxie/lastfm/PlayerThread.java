@@ -13,6 +13,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -601,8 +602,13 @@ public class PlayerThread extends Thread {
 			mScrobbler = new ScrobblerClient();
 			mScrobbler.handshake(username, password);			
 			return true;
-		} catch (IOException e) {
-			setErrorState(new LastFMError("Login failed: please check your internet connection"));
+		}
+		catch (UnknownHostException e) {
+			setErrorState(new LastFMError("Login failed, unknown host (please check your internet connection)"));
+			return false;
+		}
+		catch (IOException e) {
+			setErrorState(new LastFMError("Login failed due to network problem (" + e.toString() + ")"));
 			return false;
 		}
 	}
