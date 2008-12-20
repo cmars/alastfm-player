@@ -54,6 +54,7 @@ public class LastFMPlayer extends Activity {
 	protected static final int TUNE = 2;
 	protected static final int SET_USER_INFO_AND_TUNE = 3;
 	protected static final int SET_USER_INFO = 4;
+	protected static final int SETTINGS = 5;	
 
 	public static final int MENU_SETTINGS_ID = Menu.FIRST;
 	public static final int MENU_ABOUT_ID = Menu.FIRST + 1;
@@ -75,8 +76,8 @@ public class LastFMPlayer extends Activity {
 		switch (item.getItemId()) {
 		case MENU_SETTINGS_ID:
 			startActivityForResult(
-					new Intent(LastFMPlayer.this, UserInfo.class),
-					SET_USER_INFO);
+					new Intent(LastFMPlayer.this, Settings.class),
+					SETTINGS);
 			return true;
 		case MENU_ABOUT_ID:
 			startActivity(new Intent(LastFMPlayer.this, AboutActivity.class));

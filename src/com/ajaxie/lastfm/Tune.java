@@ -46,6 +46,7 @@ public class Tune extends ListActivity {
 	MyListAdapter mAdapter;
 	protected static final int ENTER_ARTIST = 0;
 	protected static final int ENTER_TAG = 1;
+	protected static final int CHOOSE_FRIEND = 2;
 	String mUsername;	
 
 	   @Override
@@ -79,7 +80,12 @@ public class Tune extends ListActivity {
 	        					if (path.size() >= 2 && path.get(1).equals("recommended"))
 	        						getListView().setItemChecked(STATION_TYPE_RECOMMENDED, true);
 	        					if (path.size() >= 2 && path.get(1).equals("personal"))
-	        						getListView().setItemChecked(STATION_TYPE_PERSONAL, true);
+	        					{
+	        						if (path.get(0).equals(mUsername))
+	        							getListView().setItemChecked(STATION_TYPE_PERSONAL, true);
+	        						else
+		        						getListView().setItemChecked(STATION_TYPE_FRIENDS, true);
+	        					}
 	        					if (path.size() >= 2 && path.get(1).equals("playlist"))
 	        						getListView().setItemChecked(STATION_TYPE_PLAYLIST, true);
 	        				}
@@ -137,6 +143,10 @@ public class Tune extends ListActivity {
 					startActivityForResult(new Intent(Tune.this,
 							EnterTag.class), ENTER_TAG);
 					break;
+				case STATION_TYPE_FRIENDS:
+					startActivityForResult(new Intent(Tune.this,
+							ChooseFriendActivity.class), CHOOSE_FRIEND);
+					break;
 				}
 			}
 	    	   
@@ -175,20 +185,35 @@ public class Tune extends ListActivity {
 							this, LastFMPlayer.class));
 					finish();					
 				}
+				else 
+					if (requestCode == CHOOSE_FRIEND && resultCode == RESULT_OK) {
+						Uri.Builder builder = new Uri.Builder();
+						builder.scheme("lastfm");
+						builder.fragment("");
+						builder.query("");
+						builder.authority("user");
+						builder.appendPath(data.getStringExtra("result"));
+						builder.appendPath("personal");
+						Uri stationUri = builder.build();
+						setResult(RESULT_OK, new Intent("play", stationUri,
+								this, LastFMPlayer.class));
+						finish();											
+					}
 					
 		}	   
 	   
 	   private final static String[] STATION_TYPES = new String[] {
 		   		"Artist", "Tag", "My Recommendations",
 		        "My Radio Station",		        
-		        "My Neighbour Radio", "My Playlist"} ;
+		        "My Neighbour Radio", "Friends Radio", "My Playlist"} ;
 	   
 	   private final int STATION_TYPE_ARTIST = 0;
 	   private final int STATION_TYPE_TAG = 1;
 	   private final int STATION_TYPE_RECOMMENDED = 2;
 	   private final int STATION_TYPE_PERSONAL = 3;
 	   private final int STATION_TYPE_NEIGHBOR = 4;
-	   private final int STATION_TYPE_PLAYLIST = 5;
+	   private final int STATION_TYPE_FRIENDS = 5;
+	   private final int STATION_TYPE_PLAYLIST = 6;
 //	   private final int STATION_TYPE_GROUP = 6;
 //	   private final int STATION_TYPE_LOVED = 7;
 	   

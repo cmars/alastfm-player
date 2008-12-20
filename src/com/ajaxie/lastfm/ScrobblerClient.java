@@ -18,12 +18,16 @@ import com.ajaxie.lastfm.Utils.OptionsParser;
 
 public class ScrobblerClient {
 
-	static final String CLIENT_ID = "wmp";
-	static final String CLIENT_VER = "1.0";
+	static final String CLIENT_ID = "ala";
 	private static final String TAG = "ScrobblerClient";
 	private String mSessionId;
 	private String mNowPlayingUrl;
 	private String mSubmissionUrl;
+	private String mClientVersion = "1.0";
+	
+	void setClientVersionString(String ver) {
+		mClientVersion = ver;
+	}
 	
 	boolean handshake(String username, String password){
 		String timestamp = Long.toString(System.currentTimeMillis() / 1000);
@@ -31,7 +35,7 @@ public class ScrobblerClient {
 		BufferedReader stringReader = null;
 		try {					
 			String req = "http://post.audioscrobbler.com/?hs=true&p=1.2&" +
-				"c=" + CLIENT_ID + "&v=" + CLIENT_VER + "&u=" + URLEncoder.encode(username, "UTF-8") + 
+				"c=" + CLIENT_ID + "&v=" + URLEncoder.encode(mClientVersion, "UTF-8") + "&u=" + URLEncoder.encode(username, "UTF-8") + 
 				"&t=" + timestamp + "&a=" + auth;
 			URL url = new URL(req);
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();

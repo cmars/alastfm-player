@@ -13,12 +13,16 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.Message;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 
 public class PlayerService extends Service {
@@ -279,16 +283,40 @@ public class PlayerService extends Service {
 			Log.e(TAG, "Invalid service intent action: " + intent.getAction());
 	}
 
+	PhoneStateListener mPhoneStateListener = new PhoneStateListener()
+			{
+				public void onCallStateChanged(int state, String incomingNumber) {					
+					if (state == TelephonyManager.CALL_STATE_IDLE)
+					{
+						if (mPlayerThread != null)
+							mPlayerThread.unmute();						
+					} else
+						if (mPlayerThread != null)
+							mPlayerThread.mute();						
+				}
+			}
+			;
 	public boolean startPlaying(String url) {
 			if (mPlayerThread != null)
 				stopPlaying();
 
 			SharedPreferences settings = getSharedPreferences(
 					LastFMPlayer.PREFS_NAME, 0);
+			
+			TelephonyManager tm = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
+			
+			if (settings.getBoolean("muteOnCall", false))
+				tm.listen(mPhoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
+			
 			String username = settings.getString("username", null);
 			String password = settings.getString("password", null);
 
 			mPlayerThread = new PlayerThread(username, password);
+			try {
+				mPlayerThread.setVersionString(getPackageManager().getPackageInfo(this.getPackageName(), 0).versionName);
+			} catch (NameNotFoundException e) {
+			}
+			
 			mPlayerThread
 					.setLastFMNotificationListener(new ServiceNotificationListener(
 							mLastFMNotificationListener));

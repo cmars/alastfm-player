@@ -29,4 +29,9 @@
 <string name="enter_station_title">Enter station name</string>
 <string name="enter_artist_name_title">Enter station name</string>
 <string name="enter_tag_title">Enter tag</string>
+<string name="choose_friend_title">Enter tag</string>
+<string name="mute_on_call">Mute sound on call</string>
+<string name="userinfo_button">Change user name &amp; password</string>
+<string name="reset_button">Reset all settings</string>
+<string name="settings_title">Settings</string>
 </resources>

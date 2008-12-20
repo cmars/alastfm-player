@@ -32,6 +32,7 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 import org.xmlpull.v1.XmlSerializer;
 
+import android.content.pm.PackageManager.NameNotFoundException;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnBufferingUpdateListener;
 import android.os.ConditionVariable;
@@ -68,6 +69,12 @@ public class PlayerThread extends Thread {
 	public ConditionVariable mInitLock = new ConditionVariable();
 	private String mSession;
 	private String mBaseURL;
+	
+	private String mVersionString = "1.0";
+	
+	public void setVersionString(String ver) {
+		mVersionString = ver;
+	}
 
 	MediaPlayer mp = null;
 
@@ -250,7 +257,7 @@ public class PlayerThread extends Thread {
 						getCurrentTrack().downloadImageBitmap();
 						break;
 					case PlayerThread.MESSAGE_CACHE_FRIENDS_LIST:
-						mFriendsList = downloadFriendsList();
+						mFriendsList = downloadFriendsList(mUsername);
 						break;
 					case PlayerThread.MESSAGE_UPDATE_PLAYLIST:
 						mPlaylist = getPlaylist();
@@ -402,8 +409,13 @@ public class PlayerThread extends Thread {
 			mediaPlayer.setOnCompletionListener(mOnTrackCompletionListener);
 			mediaPlayer.setOnBufferingUpdateListener(mOnBufferingUpdateListener);
 			mediaPlayer.prepare();
+			if (mMuted)
+				mediaPlayer.setVolume(0, 0);
 			mediaPlayer.start();
 			mp = mediaPlayer;
+			
+			syncMuteState(); // in case if mute flag changed concurrently after previous if
+			
 			mStartPlaybackTime = System.currentTimeMillis() / 1000;
 			mCurrentTrackRating = "";
 			Message.obtain(mHandler, PlayerThread.MESSAGE_CACHE_TRACK_INFO)
@@ -429,11 +441,11 @@ public class PlayerThread extends Thread {
 				.sendToTarget();
 	}
 
-	private ArrayList<FriendInfo> downloadFriendsList() {
+	public static ArrayList<FriendInfo> downloadFriendsList(String username) {
 		try {
 			URL url;
 			url = new URL(WS_URL + "/user/"
-					+ URLEncoder.encode(mUsername, "UTF-8") + "/friends.xml");
+					+ URLEncoder.encode(username, "UTF-8") + "/friends.xml");
 			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 			conn.connect();
 			InputStream is = conn.getInputStream();
@@ -600,6 +612,7 @@ public class PlayerThread extends Thread {
 			mBaseURL = baseHost + basePath;
 			
 			mScrobbler = new ScrobblerClient();
+			mScrobbler.setClientVersionString(mVersionString);
 			mScrobbler.handshake(username, password);			
 			return true;
 		}
@@ -689,6 +702,32 @@ public class PlayerThread extends Thread {
 		} catch (Exception e) {
 			Log.e(TAG, "while xmlrpc", e);
 			throw new LastFMError(e.toString());
+		}
+	}
+
+	Boolean mMuted = false;
+	public void unmute() {
+		synchronized (mMuted) {
+			if (mp != null)
+				mp.setVolume(1.0f, 1.0f);
+			mMuted = false;
+		}
+	}
+
+	public void mute() {
+		synchronized (mMuted) {
+			mMuted = true;
+			if (mp != null)
+				mp.setVolume(0, 0);
+		}
+	}
+	
+	public void syncMuteState() {
+		synchronized (mMuted) {
+			if (mMuted) 
+				mp.setVolume(0, 0);
+			else
+				mp.setVolume(1, 1);
 		}
 	}
 }

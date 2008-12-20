@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+                    
+		<Button android:id="@+id/reset_button"
+		    android:layout_height="wrap_content" 
+		    android:autoLink="all"
+			android:layout_marginBottom="15sp"
+		    android:text="@string/reset_button"
+		    android:layout_width="fill_parent"
+		    android:drawableLeft="@drawable/indicator_input_error"/>                        
+                    
+        <Button android:id="@+id/userinfo_button"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+	        android:text="@string/userinfo_button" android:layout_marginTop="24sp"/>
+        <CheckBox android:id="@+id/mute_on_call_check"
+            android:paddingBottom="24sp"
+	        android:paddingTop="24sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/mute_on_call" />
+    
+    <TextView
+        android:layout_width="fill_parent" android:layout_height="fill_parent"        
+        android:layout_weight="1"
+        android:text=""/>
+                                    
+</LinearLayout>
