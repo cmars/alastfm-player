@@ -13,8 +13,6 @@ import android.view.View.OnKeyListener;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ListView;
 
 public class EnterNameActivity extends Activity {
 

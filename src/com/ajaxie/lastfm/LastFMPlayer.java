@@ -1,12 +1,7 @@
 package com.ajaxie.lastfm;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.Timer;
 import java.util.TimerTask;
-
-import com.ajaxie.lastfm.PlayerService.PlayingStatus;
-import com.ajaxie.lastfm.PlayerService.Status;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -25,23 +20,18 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.View.OnKeyListener;
 import android.view.animation.AnimationUtils;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.Gallery.LayoutParams;
+import android.widget.ImageButton;
 import android.widget.ImageSwitcher;
 import android.widget.ImageView;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ImageButton;
 import android.widget.ViewSwitcher;
-import android.widget.Gallery.LayoutParams;
 
 public class LastFMPlayer extends Activity {
 

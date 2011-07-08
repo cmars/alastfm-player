@@ -14,8 +14,6 @@ import java.net.URLEncoder;
 
 import android.util.Log;
 
-import com.ajaxie.lastfm.Utils.OptionsParser;
-
 public class ScrobblerClient {
 
 	static final String CLIENT_ID = "ala";

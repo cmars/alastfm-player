@@ -72,7 +72,7 @@ public class Settings extends Activity {
 		SharedPreferences settings = getSharedPreferences(
 				LastFMPlayer.PREFS_NAME, 0);
 		
-		muteSoundCheckBox.setChecked(settings.getBoolean("muteOnCall", false));
+		muteSoundCheckBox.setChecked(settings.getBoolean("muteOnCall", true));
 		
 		muteSoundCheckBox.setOnCheckedChangeListener(new OnCheckedChangeListener() {
 
